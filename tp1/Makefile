@@ -31,11 +31,12 @@ run: all
 #   .ii : prétraitement        .s : assembleur       .o : code objet
 #   .a  : bibliothèque statique .so : bibliothèque dynamique
 #   test_pile / test_pile_statique : exécutables ELF Linux
+#   (etapes_compilation.pdf, qui explique ces fichiers, n'est pas supprimé par make clean)
 ETAPES = compilation
+ETAPES_FICHIERS = $(addprefix $(ETAPES)/, test_pile.ii test_pile.s test_pile.o \
+                  libpile.a libpile.so test_pile test_pile_statique)
 
-etapes: $(ETAPES)/test_pile.ii $(ETAPES)/test_pile.s $(ETAPES)/test_pile.o \
-        $(ETAPES)/libpile.a $(ETAPES)/libpile.so \
-        $(ETAPES)/test_pile $(ETAPES)/test_pile_statique
+etapes: $(ETAPES_FICHIERS)
 
 # 1. prétraitement : includes recopiés, macros remplacées, commentaires supprimés
 $(ETAPES)/%.ii: src/%.cpp $(HEADERS) | $(ETAPES)
@@ -68,6 +69,6 @@ $(ETAPES):
 	mkdir -p $(ETAPES)
 
 clean:
-	rm -rf obj $(LIB) $(PROGS) $(ETAPES)
+	rm -rf obj $(LIB) $(PROGS) $(ETAPES_FICHIERS)
 
 .PHONY: all run etapes clean

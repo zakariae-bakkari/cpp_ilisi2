@@ -28,6 +28,8 @@ make clean    # supprime les fichiers générés
 
 ## Étapes de compilation (`make etapes`)
 
+Chaque étape est expliquée en détail dans [`compilation/etapes_compilation.pdf`](compilation/etapes_compilation.pdf).
+
 | Fichier | Étape | Commande |
 |---|---|---|
 | `test_pile.ii` | prétraitement (includes et macros remplacés) | `g++ -E` |
