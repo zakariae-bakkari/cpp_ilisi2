@@ -1,0 +1,1337 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---------------------------------------------------------------------------
+% Paquets
+% ---------------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage[margin=2.3cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{fancyhdr}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,automata,babel}
+\usepackage{hyperref}
+
+\hypersetup{colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!50!black}
+
+% ---------------------------------------------------------------------------
+% Style du code C++
+% ---------------------------------------------------------------------------
+\definecolor{fondcode}{RGB}{248,248,250}
+\definecolor{motcle}{RGB}{0,0,160}
+\definecolor{commentaire}{RGB}{0,120,0}
+\definecolor{chaine}{RGB}{170,40,40}
+
+\lstdefinestyle{cpp}{
+  language=C++,
+  backgroundcolor=\color{fondcode},
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{motcle}\bfseries,
+  commentstyle=\color{commentaire}\itshape,
+  stringstyle=\color{chaine},
+  numbers=left, numberstyle=\tiny\color{gray}, numbersep=6pt,
+  frame=single, rulecolor=\color{gray!40},
+  breaklines=true, showstringspaces=false, tabsize=4,
+  morekeywords={override,nullptr,template,typename},
+  literate={é}{{\'e}}1 {è}{{\`e}}1 {ê}{{\^e}}1 {à}{{\`a}}1 {â}{{\^a}}1
+           {ô}{{\^o}}1 {î}{{\^i}}1 {ù}{{\`u}}1 {û}{{\^u}}1 {ç}{{\c c}}1
+           {É}{{\'E}}1 {ï}{{\"i}}1
+}
+\lstdefinestyle{sortie}{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{black!3},
+  frame=leftline, rulecolor=\color{blue!40!black}, numbers=none,
+  keywordstyle={}, commentstyle={}, stringstyle={},
+  breaklines=true, columns=fullflexible, keepspaces=true
+}
+\lstset{style=cpp}
+
+% ---------------------------------------------------------------------------
+% Pseudo-code en français
+% ---------------------------------------------------------------------------
+\floatname{algorithm}{Algorithme}
+\algrenewcommand\algorithmicfunction{\textbf{fonction}}
+\algrenewcommand\algorithmicfor{\textbf{pour}}
+\algrenewcommand\algorithmicforall{\textbf{pour tout}}
+\algrenewcommand\algorithmicdo{\textbf{faire}}
+\algrenewcommand\algorithmicwhile{\textbf{tant que}}
+\algrenewcommand\algorithmicif{\textbf{si}}
+\algrenewcommand\algorithmicthen{\textbf{alors}}
+\algrenewcommand\algorithmicelse{\textbf{sinon}}
+\algrenewcommand\algorithmicend{\textbf{fin}}
+\algrenewcommand\algorithmicreturn{\textbf{retourner}}
+\algrenewcommand\algorithmicrequire{\textbf{Entrée :}}
+\algrenewcommand\algorithmicensure{\textbf{Sortie :}}
+
+% Raccourcis
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\ok}{\textcolor{green!50!black}{\textbf{valide}}}
+\newcommand{\ko}{\textcolor{red!70!black}{\textbf{invalide}}}
+
+% En-têtes
+\setlength{\headheight}{14pt}
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{TP 1 -- Piles génériques}
+\rhead{POO avancée \& Design Patterns}
+\cfoot{\thepage}
+
+% ===========================================================================
+\begin{document}
+
+% ---------------------------------------------------------------------------
+% Page de titre
+% ---------------------------------------------------------------------------
+\begin{titlepage}
+  \centering
+  \vspace*{2cm}
+  {\large Programmation Orientée Objet Avancée et Design Patterns\par}
+  \vspace{1.5cm}
+  \rule{\linewidth}{0.6pt}\par\vspace{0.4cm}
+  {\Huge\bfseries Rapport de TP 1\par}
+  \vspace{0.3cm}
+  {\LARGE Pile générique et analyse d'expressions mathématiques\par}
+  \vspace{0.4cm}
+  \rule{\linewidth}{0.6pt}\par
+  \vspace{1.5cm}
+  {\large Langage : C++ \quad--\quad Système : Linux\par}
+  \vspace{0.4cm}
+  {\normalsize Code source : \url{https://github.com/zakariae-bakkari/cpp_pile_library-.so-.dll-}\par}
+  \vfill
+  {\large Réalisé par : \textbf{Zakariae Bakkari}\par}
+  \vspace{1cm}
+  {\large \today\par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ===========================================================================
+\section{Introduction}
+
+La \emph{pile} (\emph{stack}) est une structure de données de type LIFO
+(\emph{Last In, First Out}) : le dernier élément ajouté est le premier retiré.
+Elle est utilisée dans de nombreux algorithmes : gestion des appels de fonctions,
+annulation (\emph{undo}), parcours en profondeur, et surtout
+\textbf{analyse syntaxique d'expressions}.
+
+Ce TP comporte trois exercices liés entre eux :
+\begin{enumerate}
+  \item concevoir une \textbf{pile générique} (\code{template}) avec deux
+        implémentations : tableau dynamique et liste chaînée ;
+  \item utiliser cette pile pour \textbf{vérifier une expression mathématique}
+        (validité, équilibre et ordre des délimiteurs), puis l'évaluer en
+        respectant la priorité des opérateurs ;
+  \item \textbf{convertir} une expression de la notation infixe
+        vers la notation préfixe et inversement.
+\end{enumerate}
+
+Pour chaque exercice, nous présentons la \textbf{problématique}, la
+\textbf{méthodologie} adoptée et les \textbf{résultats} obtenus.
+
+\paragraph{Environnement de travail.} Le TP est réalisé sous \textbf{Linux}
+(Ubuntu, compilateur \code{g++} 15.2, outil \code{make}). Le code des piles
+et de l'analyseur d'expressions est compilé sous forme de
+\textbf{bibliothèque dynamique} \code{libpile.so}, l'équivalent Linux d'une
+DLL Windows, utilisée par les trois programmes de test
+(section~\ref{sec:bibliotheque}).
+
+\paragraph{Dépôt GitHub.} L'ensemble du code source, la bibliothèque, les
+fichiers d'étapes de compilation et ce rapport sont disponibles à
+l'adresse : \url{https://github.com/zakariae-bakkari/cpp_pile_library-.so-.dll-}.
+
+\paragraph{Organisation du code.}
+\begin{center}
+\small
+\begin{tabular}{ll}
+  \toprule
+  \textbf{Fichier} & \textbf{Rôle} \\
+  \midrule
+  \code{include/Pile.h}        & interface abstraite générique \code{Pile<T>} \\
+  \code{include/PileTableau.h}, \code{.tpp} & tableau dynamique : déclaration, implémentation \\
+  \code{include/PileListe.h}, \code{.tpp}   & liste chaînée : déclaration, implémentation \\
+  \code{include/Expression.h}, \code{.tpp}  & analyse lexicale, vérification, évaluation, conversions \\
+  \code{src/PileTableau.cpp}, \code{PileListe.cpp}, \code{Expression.cpp}
+                               & sources de la bibliothèque \code{libpile.so} \\
+  \code{src/test\_pile.cpp}       & tests de l'exercice 1 \\
+  \code{src/test\_expression.cpp} & tests de l'exercice 2 \\
+  \code{src/test\_conversion.cpp} & tests de l'exercice 3 \\
+  \code{Makefile}              & compilation de \code{libpile.so} et des tests \\
+  \code{compilation\_steps/}   & fichiers générés à chaque étape de compilation \\
+  \code{guide/}                & guide PDF : bibliothèques \code{.so} / \code{.a}, fichiers \code{.tpp} \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Pour la lisibilité, les extraits de code des sections 2 à 4
+présentent les méthodes écrites à l'intérieur des classes ; dans le projet,
+leur code se trouve dans les fichiers \code{.tpp}
+(voir section~\ref{sec:bibliotheque}).
+
+% ===========================================================================
+\section{Exercice 1 : Pile générique}
+
+\subsection{Problématique}
+
+Une pile écrite pour un type fixe (par exemple \code{int}) doit être
+réécrite pour chaque nouveau type (\code{char}, \code{string},
+\code{double}\dots), ce qui duplique le code et multiplie les erreurs.
+De plus, il existe plusieurs représentations possibles d'une pile, chacune
+avec ses avantages : il faut pouvoir en changer \emph{sans modifier le code
+qui l'utilise}.
+
+Les questions posées sont donc :
+\begin{itemize}
+  \item Comment écrire une pile \textbf{indépendante du type} des éléments ?
+  \item Comment offrir \textbf{deux représentations} (tableau dynamique et
+        liste chaînée) derrière un \textbf{même contrat} ?
+  \item Comment garantir une \textbf{gestion mémoire correcte}
+        (pas de fuite, copie profonde, pile vide) ?
+  \item Quelle représentation est la plus \textbf{performante} ?
+\end{itemize}
+
+\subsection{Méthodologie}
+
+\subsubsection{Conception}
+
+Nous séparons le \emph{contrat} de l'\emph{implémentation} :
+\begin{itemize}
+  \item une classe abstraite générique \code{Pile<T>} déclare les opérations
+        (\code{empiler}, \code{depiler}, \code{getSommet}, \code{estVide},
+        \code{taille}) sous forme de méthodes virtuelles pures ;
+  \item deux classes génériques concrètes, \code{PileTableau<T>} et
+        \code{PileListe<T>}, héritent de cette interface ;
+  \item le code client (fonctions de test, analyseur d'expressions) ne dépend
+        que de l'interface ou du paramètre de modèle, ce qui permet
+        d'interchanger les implémentations.
+\end{itemize}
+
+Cette conception combine les deux formes de polymorphisme du C++ :
+le polymorphisme \textbf{paramétrique} (templates, choix du type \code{T})
+et le polymorphisme \textbf{d'inclusion} (héritage et méthodes virtuelles,
+choix de la représentation).
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    classe/.style={draw, fill=blue!4, inner sep=0pt, font=\small},
+    herite/.style={-{Triangle[open,length=3mm,width=3mm]}, thick},
+    utilise/.style={dashed, -{Stealth[length=2.5mm]}}
+  ]
+  \node[classe] (pile) {
+    \begin{tabular}{l}
+      \multicolumn{1}{c}{\guillemotleft interface\guillemotright} \\
+      \multicolumn{1}{c}{\textbf{\textit{Pile<T>}}} \\ \hline
+      \code{+ empiler(x : const T\&) : void} \\
+      \code{+ depiler() : T} \\
+      \code{+ getSommet() : const T\&} \\
+      \code{+ estVide() : bool} \\
+      \code{+ taille() : int}
+    \end{tabular}};
+
+  \node[classe, below left=1.4cm and -1.2cm of pile] (tab) {
+    \begin{tabular}{l}
+      \multicolumn{1}{c}{\textbf{PileTableau<T>}} \\ \hline
+      \code{- tab : T*} \\
+      \code{- capacite : int} \\
+      \code{- nb : int} \\ \hline
+      \code{- agrandir() : void} \\
+      \code{+ getCapacite() : int} \\
+      \code{+ afficher() : void}
+    \end{tabular}};
+
+  \node[classe, below right=1.4cm and -1.2cm of pile] (lst) {
+    \begin{tabular}{l}
+      \multicolumn{1}{c}{\textbf{PileListe<T>}} \\ \hline
+      \code{- tete : Noeud*} \\
+      \code{- nb : int} \\ \hline
+      \code{- vider() : void} \\
+      \code{- copier(p) : void} \\
+      \code{+ afficher() : void}
+    \end{tabular}};
+
+  \node[classe, right=1.2cm of pile] (ana) {
+    \begin{tabular}{l}
+      \multicolumn{1}{c}{\textbf{Analyseur<P>}} \\ \hline
+      \code{+ verifier(expr)} \\
+      \code{+ evaluer(expr)} \\
+      \code{+ versPrefixe(expr)} \\
+      \code{+ prefixeVersInfixe(pre)}
+    \end{tabular}};
+
+  \draw[thick] (tab.north) |- ([yshift=-0.7cm]pile.south);
+  \draw[thick] (lst.north) |- ([yshift=-0.7cm]pile.south);
+  \draw[herite] ([yshift=-0.7cm]pile.south) -- (pile.south);
+  \draw[utilise] (ana.west) -- node[above, font=\scriptsize]{utilise} (pile.east);
+\end{tikzpicture}
+\caption{Diagramme de classes simplifié}
+\end{figure}
+
+\subsubsection{Interface générique}
+
+\begin{lstlisting}[caption={Interface \code{Pile<T>} (\code{Pile.h})}]
+template <typename T>
+class Pile {
+public:
+    virtual ~Pile() {}
+
+    virtual void empiler(const T& x) = 0;       // ajoute x au sommet
+    virtual T depiler() = 0;                    // retire et renvoie le sommet
+    virtual const T& getSommet() const = 0;     // consulte le sommet
+    virtual bool estVide() const = 0;
+    virtual int taille() const = 0;
+};
+\end{lstlisting}
+
+Le destructeur virtuel garantit que la destruction d'une pile concrète via
+un pointeur \code{Pile<T>*} libère correctement la mémoire.
+
+\subsubsection{Implémentation par tableau dynamique}
+
+Les éléments sont rangés dans un tableau alloué sur le tas ; le sommet est
+la case \code{tab[nb-1]}. Lorsque le tableau est plein, sa capacité est
+\textbf{doublée} : une copie en $O(n)$ n'a lieu que $\log_2 n$ fois, ce qui
+donne un coût \textbf{amorti} en $O(1)$ par empilement.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    case/.style={draw, minimum width=0.9cm, minimum height=0.7cm, font=\small},
+    libre/.style={case, fill=gray!15}
+  ]
+  \foreach \i/\v in {0/10,1/20,2/30,3/40,4/50,5/60}
+    \node[case, fill=blue!8] (t\i) at (\i*0.9,0) {\v};
+  \foreach \i in {6,7}
+    \node[libre] (t\i) at (\i*0.9,0) {};
+  \foreach \i in {0,...,7}
+    \node[font=\scriptsize, gray, below=1pt of t\i] {\i};
+  \draw[{Stealth[length=2.5mm]}-] (t5.north) -- ++(0,0.7)
+    node[above, font=\small] {sommet = \code{tab[nb-1]}};
+  \node[font=\small, right=0.4cm of t7, align=left]
+    {\code{nb = 6}\\ \code{capacite = 8}};
+\end{tikzpicture}
+\caption{Représentation de la pile par tableau dynamique}
+\end{figure}
+
+\begin{lstlisting}[caption={Méthodes essentielles de \code{PileTableau<T>}}]
+// double la capacité quand le tableau est plein : coût amorti O(1)
+void agrandir() {
+    int nouvelleCapacite = capacite * 2;
+    T* nouveau = new T[nouvelleCapacite];
+    for (int i = 0; i < nb; i++)
+        nouveau[i] = tab[i];
+    delete[] tab;
+    tab = nouveau;
+    capacite = nouvelleCapacite;
+}
+
+void empiler(const T& x) override {
+    if (nb == capacite)
+        agrandir();
+    tab[nb++] = x;
+}
+
+T depiler() override {
+    if (estVide())
+        throw std::underflow_error("Pile vide");
+    return tab[--nb];
+}
+\end{lstlisting}
+
+\subsubsection{Implémentation par liste chaînée}
+
+Chaque élément est stocké dans un \code{Noeud} alloué individuellement ;
+le sommet est la \textbf{tête} de la liste, ce qui rend l'empilement et le
+dépilement en $O(1)$ sans jamais recopier les données.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    val/.style={draw, fill=blue!8, minimum width=0.9cm, minimum height=0.7cm, font=\small},
+    ptr/.style={draw, minimum width=0.5cm, minimum height=0.7cm}
+  ]
+  \node (tete) {\code{tete}};
+  \node[val, right=0.8cm of tete] (v1) {60};
+  \node[ptr, right=0pt of v1] (p1) {};
+  \node[val, right=0.8cm of p1] (v2) {50};
+  \node[ptr, right=0pt of v2] (p2) {};
+  \node[val, right=0.8cm of p2] (v3) {40};
+  \node[ptr, right=0pt of v3] (p3) {};
+  \node[right=0.3cm of p3] (dots) {$\cdots$};
+  \node[val, right=0.3cm of dots] (v4) {10};
+  \node[ptr, right=0pt of v4] (p4) {};
+  \node[right=0.6cm of p4, font=\small] (nul) {\code{nullptr}};
+
+  \draw[-{Stealth[length=2.5mm]}] (tete) -- (v1);
+  \foreach \src/\dst in {p1/v2, p2/v3, p3/dots, p4/nul} {
+    \fill (\src.center) circle (1.5pt);
+    \draw[-{Stealth[length=2.5mm]}] (\src.center) -- (\dst.west);
+  }
+\end{tikzpicture}
+\caption{Représentation de la pile par liste chaînée (sommet = tête)}
+\end{figure}
+
+\begin{lstlisting}[caption={Structure et méthodes essentielles de \code{PileListe<T>}}]
+struct Noeud {
+    T valeur;
+    Noeud* suivant;
+    Noeud(const T& v, Noeud* s = nullptr) : valeur(v), suivant(s) {}
+};
+
+void empiler(const T& x) override {
+    tete = new Noeud(x, tete);   // insertion en tête
+    nb++;
+}
+
+T depiler() override {
+    if (estVide())
+        throw std::underflow_error("Pile vide");
+    Noeud* tmp = tete;
+    T v = tmp->valeur;
+    tete = tete->suivant;
+    delete tmp;
+    nb--;
+    return v;
+}
+\end{lstlisting}
+
+\subsubsection{Gestion de la mémoire}
+
+Les deux classes possèdent de la mémoire dynamique ; nous appliquons donc la
+\textbf{règle de trois} : destructeur, constructeur de copie et opérateur
+d'affectation effectuent une \textbf{copie profonde}. Pour
+\code{PileTableau}, l'opérateur d'affectation alloue le nouveau tableau
+\emph{avant} de libérer l'ancien afin de rester cohérent si \code{new}
+échoue. Toute opération sur une pile vide lève l'exception
+\code{std::underflow\_error}.
+
+\subsubsection{Complexité}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcc}
+  \toprule
+  \textbf{Opération} & \textbf{PileTableau} & \textbf{PileListe} \\
+  \midrule
+  \code{empiler}    & $O(1)$ amorti ($O(n)$ lors d'un agrandissement) & $O(1)$ \\
+  \code{depiler}    & $O(1)$ & $O(1)$ \\
+  \code{getSommet}  & $O(1)$ & $O(1)$ \\
+  copie             & $O(n)$ & $O(n)$ \\
+  mémoire           & entre $n$ et $2n$ cases & $n$ nœuds (valeur + pointeur) \\
+  \bottomrule
+\end{tabular}
+\caption{Comparaison théorique des deux implémentations}
+\end{table}
+
+\subsection{Résultats}
+
+Le programme \code{test\_pile} valide chaque aspect de la conception :
+
+\begin{lstlisting}[style=sortie, caption={Extrait de la sortie de \code{test\_pile}}]
+=== 1. PileTableau<int> ===
+  empiler(10) -> taille=1 capacite=2
+  empiler(20) -> taille=2 capacite=2
+  empiler(30) -> taille=3 capacite=4
+  empiler(40) -> taille=4 capacite=4
+  empiler(50) -> taille=5 capacite=8
+  empiler(60) -> taille=6 capacite=8
+  contenu : [ 60 50 40 30 20 10 ]
+  sommet  : 60
+  depiler : 60
+
+=== 2. PileListe<string> ===
+  contenu : [ gamma beta alpha ]
+
+=== 3. PileTableau<Point> (type utilisateur) ===
+  contenu : [ (3,4) (1,2) ]
+
+=== 4. Polymorphisme via Pile<T>& ===
+PileTableau<char>
+  depilement : E L I P
+PileListe<char>
+  depilement : E L I P
+
+=== 5. Copie profonde ===
+  original : [ 2 1 ]
+  copie    : [ 99 2 1 ]
+
+=== 6. Exceptions (pile vide) ===
+  PileTableau : Pile vide
+  PileListe   : Pile vide
+\end{lstlisting}
+
+\paragraph{Interprétation.}
+\begin{itemize}
+  \item \textbf{Généricité :} la même classe fonctionne avec \code{int},
+        \code{string}, \code{char} et un type utilisateur \code{Point}.
+  \item \textbf{Agrandissement :} la capacité double (2, 4, 8) exactement
+        lorsque le tableau est plein.
+  \item \textbf{Polymorphisme :} la fonction \code{viderEtAfficher(Pile<T>\&)}
+        traite les deux implémentations de façon identique ; empiler
+        \og PILE \fg{} puis tout dépiler donne bien \og ELIP \fg{} (ordre LIFO).
+  \item \textbf{Copie profonde :} modifier la copie ne modifie pas l'original.
+  \item \textbf{Robustesse :} le dépilement d'une pile vide est intercepté par
+        une exception.
+\end{itemize}
+
+\paragraph{Performances.} Temps mesurés pour empiler puis dépiler $n$
+entiers (compilation \code{-O2}) :
+
+\begin{table}[H]
+\centering
+\begin{tabular}{rrrr}
+  \toprule
+  $n$ & \textbf{PileTableau} (ms) & \textbf{PileListe} (ms) & \textbf{Rapport} \\
+  \midrule
+  $10^5$ & 0{,}30  & 3{,}03   & $\approx 10\times$ \\
+  $10^6$ & 2{,}14  & 36{,}18  & $\approx 17\times$ \\
+  $10^7$ & 32{,}24 & 320{,}12 & $\approx 10\times$ \\
+  \bottomrule
+\end{tabular}
+\caption{Comparaison expérimentale des deux implémentations}
+\end{table}
+
+Les deux implémentations ont un temps linéaire en $n$, mais le tableau
+dynamique est environ \textbf{dix fois plus rapide}. La liste effectue une
+allocation (\code{new}) et une libération (\code{delete}) par élément,
+tandis que le tableau ne réalloue que $\log_2 n$ fois ($\approx 22$ fois
+pour $n = 10^7$) et stocke ses éléments de façon contiguë, ce qui exploite
+le cache du processeur. La liste reste intéressante lorsque l'on veut éviter
+les recopies (éléments coûteux à copier) ou garantir un temps constant
+\emph{dans le pire cas} pour chaque opération.
+
+% ===========================================================================
+\section{Exercice 2 : Vérification d'une expression mathématique}
+
+\subsection{Problématique}
+
+Avant d'évaluer une expression comme
+$\{\,[\,(1+2)\times 3\,]-4\,\}\,/\,5$, il faut s'assurer qu'elle est
+\textbf{bien formée}. Plusieurs types d'erreurs doivent être détectés :
+\begin{enumerate}
+  \item \textbf{caractères interdits} : \code{3 \# 4} ;
+  \item \textbf{délimiteurs non équilibrés} : \code{(3 + 4}, \code{3 + 4)} ;
+  \item \textbf{délimiteurs mal appariés} : \code{(3 + 4]} ;
+  \item \textbf{ordre des délimiteurs non respecté} : par convention
+        mathématique, les accolades contiennent les crochets qui contiennent
+        les parenthèses, $\{\,[\,(\;)\,]\,\}$ ; ainsi \code{( [ 1 + 2 ] )}
+        est refusé ;
+  \item \textbf{erreurs de syntaxe} entre opérandes et opérateurs :
+        \code{3 + * 4}, \code{3 4 + 5}, \code{(3 + )}, \code{()}, \code{3 +}.
+\end{enumerate}
+Une fois l'expression validée, il faut pouvoir l'\textbf{évaluer} en
+respectant la \textbf{priorité} (\code{\textasciicircum} $>$ \code{* /} $>$ \code{+ -}) et
+l'\textbf{associativité} des opérateurs. La difficulté est que
+l'imbrication des délimiteurs est arbitrairement profonde : un simple
+compteur ne suffit pas à vérifier l'appariement, il faut \emph{mémoriser
+l'ordre} des ouvertures, d'où l'usage d'une pile.
+
+\subsection{Méthodologie}
+
+\subsubsection{Analyse lexicale}
+
+La fonction \code{decouper} transforme la chaîne en une suite de
+\textbf{jetons} (\code{Token}) : nombre (entier ou décimal), variable
+(identificateur), opérateur (\code{+ - * / \textasciicircum}), délimiteur
+ouvrant (\code{( [ \{}) ou fermant (\code{) ] \}}). Chaque jeton mémorise sa
+\textbf{position} dans la chaîne afin de localiser précisément les erreurs.
+Les espaces sont ignorés et tout autre caractère déclenche une erreur.
+
+\subsubsection{Automate de vérification}
+
+La vérification combine deux mécanismes :
+\begin{itemize}
+  \item un \textbf{automate à deux états} qui contrôle l'alternance
+        opérande/opérateur ;
+  \item une \textbf{pile générique de jetons} (\code{P<Token>}) qui mémorise
+        les délimiteurs ouverts et non encore fermés.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    ->, >={Stealth[length=2.5mm]}, node distance=6cm, auto,
+    every state/.style={minimum size=2.4cm, align=center, font=\small},
+    lab/.style={font=\footnotesize, align=center}
+  ]
+  \node[state, initial, initial text={début}] (O) {Attend\\ opérande};
+  \node[state, accepting, right=of O] (P) {Attend\\ opérateur};
+
+  \path
+    (O) edge[bend left=20]  node[lab]{nombre / variable} (P)
+    (P) edge[bend left=20]  node[lab]{opérateur \code{+ - * / \textasciicircum}} (O)
+    (O) edge[loop above]    node[lab]{\code{( [ \{}\\ empiler (si ordre respecté)} (O)
+    (P) edge[loop above]    node[lab]{\code{) ] \}}\\ dépiler et comparer} (P);
+\end{tikzpicture}
+\caption{Automate de vérification. Toute autre transition est une erreur ;
+l'expression est acceptée si l'on termine dans l'état \og attend opérateur \fg{}
+avec une pile vide.}
+\end{figure}
+
+Le rang d'un délimiteur est défini par $\text{rang}(\,(\,)=1$,
+$\text{rang}(\,[\,)=2$, $\text{rang}(\,\{\,)=3$. Un délimiteur ouvrant
+n'est accepté que si son rang est \textbf{inférieur ou égal} à celui du
+sommet de la pile : on peut écrire \code{((a))} ou \code{\{[(a)]\}}, mais
+pas \code{([a])}.
+
+\begin{algorithm}[H]
+\caption{Vérification d'une expression infixe}
+\begin{algorithmic}[1]
+\Require suite de jetons $t_1 \dots t_k$
+\Ensure valide, ou message d'erreur et position
+\State $pile \gets$ pile vide ; $attendOperande \gets$ vrai
+\ForAll{jeton $t$}
+  \If{$t$ est un nombre ou une variable}
+    \If{\textbf{non} $attendOperande$} \Return erreur \og opérateur manquant \fg{} \EndIf
+    \State $attendOperande \gets$ faux
+  \ElsIf{$t$ est un opérateur}
+    \If{$attendOperande$} \Return erreur \og opérande manquant \fg{} \EndIf
+    \State $attendOperande \gets$ vrai
+  \ElsIf{$t$ est un délimiteur ouvrant}
+    \If{\textbf{non} $attendOperande$} \Return erreur \og opérateur manquant \fg{} \EndIf
+    \If{$pile$ non vide \textbf{et} rang$(t) >$ rang(sommet$(pile)$)} \Return erreur d'ordre \EndIf
+    \State empiler$(pile, t)$
+  \Else \Comment{délimiteur fermant}
+    \If{$pile$ vide} \Return erreur \og fermant sans ouvrant \fg{} \EndIf
+    \If{$attendOperande$} \Return erreur \og opérande manquant \fg{} \EndIf
+    \State $o \gets$ dépiler$(pile)$
+    \If{$o$ n'est pas l'ouvrant associé à $t$} \Return erreur d'appariement \EndIf
+  \EndIf
+\EndFor
+\If{$pile$ non vide} \Return erreur \og délimiteur jamais fermé \fg{} \EndIf
+\If{$attendOperande$} \Return erreur \og expression incomplète \fg{} \EndIf
+\State \Return valide
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Généricité vis-à-vis de l'implémentation de la pile}
+
+L'analyseur est une classe paramétrée par la \emph{classe de pile}
+elle-même (paramètre de modèle de modèle) : \code{Analyseur<PileTableau>}
+et \code{Analyseur<PileListe>} exécutent le même algorithme avec
+une représentation différente.
+
+\begin{lstlisting}[caption={Cœur de la méthode \code{verifier}}]
+template <template <typename> class P>
+class Analyseur {
+public:
+    static Resultat verifier(const std::string& expr) {
+        // ... découpage en jetons, expression vide ...
+        P<Token> delimiteurs;
+        bool attendOperande = true;   // état de l'automate
+
+        for (const Token& t : tokens) {
+            switch (t.type) {
+                case NOMBRE:
+                case VARIABLE:
+                    if (!attendOperande)
+                        return {false, "Operande '" + t.texte + "' inattendu (operateur manquant)", t.position};
+                    attendOperande = false;
+                    break;
+                case OPERATEUR:
+                    if (attendOperande)
+                        return {false, "Operateur '" + t.texte + "' inattendu (operande manquant)", t.position};
+                    attendOperande = true;
+                    break;
+                case OUVRANTE:
+                    if (!attendOperande)
+                        return {false, "'" + t.texte + "' inattendu (operateur manquant)", t.position};
+                    if (!delimiteurs.estVide()
+                        && rangDelimiteur(t.texte[0]) > rangDelimiteur(delimiteurs.getSommet().texte[0]))
+                        return {false, "Ordre non respecte : ...", t.position};
+                    delimiteurs.empiler(t);
+                    break;
+                case FERMANTE: {
+                    if (delimiteurs.estVide())
+                        return {false, "'" + t.texte + "' sans delimiteur ouvrant", t.position};
+                    if (attendOperande)
+                        return {false, "Operande manquant avant '" + t.texte + "'", t.position};
+                    Token ouvrant = delimiteurs.depiler();
+                    if (ouvrant.texte[0] != ouvranteAssociee(t.texte[0]))
+                        return {false, "'" + t.texte + "' ne ferme pas '" + ouvrant.texte + "'", t.position};
+                    break;
+                }
+            }
+        }
+        if (!delimiteurs.estVide())
+            return {false, "'" + delimiteurs.getSommet().texte + "' jamais ferme", ...};
+        if (attendOperande)
+            return {false, "Expression incomplete (operande manquant a la fin)", ...};
+        return {true, "Expression valide", -1};
+    }
+};
+\end{lstlisting}
+
+\subsubsection{Trace d'exécution}
+
+Pour l'expression \code{\{ [ (1 + 2) * 3 ] - 4 \} / 5} (sommet de la pile à
+droite ; O = attend opérande, P = attend opérateur) :
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{clllc}
+  \toprule
+  \textbf{Étape} & \textbf{Jeton} & \textbf{Action} & \textbf{Pile} & \textbf{État} \\
+  \midrule
+  1  & \code{\{} & empiler                        & \code{\{}       & O \\
+  2  & \code{[}  & rang 2 $\le$ 3 : empiler       & \code{\{ [}     & O \\
+  3  & \code{(}  & rang 1 $\le$ 2 : empiler       & \code{\{ [ (}   & O \\
+  4  & \code{1}  & opérande                       & \code{\{ [ (}   & P \\
+  5  & \code{+}  & opérateur                      & \code{\{ [ (}   & O \\
+  6  & \code{2}  & opérande                       & \code{\{ [ (}   & P \\
+  7  & \code{)}  & dépiler \code{(} : apparié     & \code{\{ [}     & P \\
+  8  & \code{*}  & opérateur                      & \code{\{ [}     & O \\
+  9  & \code{3}  & opérande                       & \code{\{ [}     & P \\
+  10 & \code{]}  & dépiler \code{[} : apparié     & \code{\{}       & P \\
+  11 & \code{-}  & opérateur                      & \code{\{}       & O \\
+  12 & \code{4}  & opérande                       & \code{\{}       & P \\
+  13 & \code{\}} & dépiler \code{\{} : apparié    & (vide)          & P \\
+  14 & \code{/}  & opérateur                      & (vide)          & O \\
+  15 & \code{5}  & opérande                       & (vide)          & P \\
+  \midrule
+  \multicolumn{5}{c}{Fin : pile vide et état P $\Rightarrow$ expression \ok} \\
+  \bottomrule
+\end{tabular}
+\caption{Trace de la vérification}
+\end{table}
+
+\subsubsection{Évaluation : algorithme à deux piles}
+
+Pour évaluer une expression valide, nous utilisons l'algorithme à deux piles
+de Dijkstra : une pile d'\textbf{opérateurs} (\code{P<char>}) et une pile de
+\textbf{valeurs} (\code{P<V>}).
+\begin{itemize}
+  \item un opérande est empilé sur la pile des valeurs ;
+  \item un délimiteur ouvrant est empilé sur la pile des opérateurs ;
+  \item un délimiteur fermant déclenche des \emph{réductions} jusqu'à
+        l'ouvrant correspondant ;
+  \item un opérateur $op$ déclenche des réductions tant que le sommet est
+        un opérateur de priorité \emph{supérieure}, ou \emph{égale} si $op$
+        est associatif à gauche, puis $op$ est empilé ;
+  \item une \textbf{réduction} dépile un opérateur et deux valeurs $a, b$
+        et empile \code{combiner(op, a, b)}.
+\end{itemize}
+
+L'algorithme est écrit \textbf{une seule fois}, de façon générique : le type
+des valeurs \code{V} et la fonction \code{combiner} sont des paramètres.
+Avec \code{V = double} et \code{combiner} = calcul, on obtient
+l'\textbf{évaluation} ; avec \code{V = string} et \code{combiner} =
+concaténation, on obtient les \textbf{conversions} de l'exercice 3.
+
+\begin{lstlisting}[caption={Parcours générique d'une expression infixe}]
+template <typename V>
+static V parcourirInfixe(const std::string& expr,
+                         std::function<V(const Token&)> feuille,
+                         std::function<V(char, const V&, const V&)> combiner) {
+    Resultat r = verifier(expr);
+    if (!r.valide)
+        throw ErreurExpression(r.message, r.position);
+
+    P<char> operateurs;
+    P<V> valeurs;
+
+    // dépile un opérateur et ses deux opérandes, empile le résultat
+    auto reduire = [&]() {
+        char op = operateurs.depiler();
+        V b = valeurs.depiler();
+        V a = valeurs.depiler();
+        valeurs.empiler(combiner(op, a, b));
+    };
+
+    for (const Token& t : decouper(expr)) {
+        switch (t.type) {
+            case NOMBRE:
+            case VARIABLE:
+                valeurs.empiler(feuille(t));
+                break;
+            case OUVRANTE:
+                operateurs.empiler(t.texte[0]);
+                break;
+            case FERMANTE:
+                while (!estOuvrante(operateurs.getSommet()))
+                    reduire();
+                operateurs.depiler();   // retire le délimiteur ouvrant
+                break;
+            case OPERATEUR: {
+                char op = t.texte[0];
+                while (!operateurs.estVide() && estOperateur(operateurs.getSommet())) {
+                    char haut = operateurs.getSommet();
+                    if (priorite(haut) > priorite(op)
+                        || (priorite(haut) == priorite(op) && !associatifDroite(op)))
+                        reduire();
+                    else
+                        break;
+                }
+                operateurs.empiler(op);
+                break;
+            }
+        }
+    }
+    while (!operateurs.estVide())
+        reduire();
+    return valeurs.depiler();
+}
+
+static double evaluer(const std::string& expr) {
+    return parcourirInfixe<double>(expr,
+        [](const Token& t) -> double {
+            if (t.type == VARIABLE)
+                throw std::invalid_argument("Variable '" + t.texte + "' non evaluable");
+            return std::stod(t.texte);
+        },
+        [](char op, const double& a, const double& b) { return appliquer(op, a, b); });
+}
+\end{lstlisting}
+
+\subsection{Résultats}
+
+\subsubsection{Vérification}
+
+Le programme \code{test\_expression} soumet 20 expressions à l'analyseur.
+Chaque erreur est localisée par un curseur \code{\textasciicircum} :
+
+\begin{lstlisting}[style=sortie, caption={Extrait de la sortie de \code{test\_expression}}]
+  "{ [ ( 1 + 2 ] ) }"
+               ^
+   -> INVALIDE (pos 12) : ']' ne ferme pas '(' (position 4)
+  "( [ 1 + 2 ] )"
+     ^
+   -> INVALIDE (pos 2) : Ordre non respecte : '[' a l'interieur de '('
+  "3 + * 4"
+       ^
+   -> INVALIDE (pos 4) : Operateur '*' inattendu (operande manquant)
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\linewidth}{>{\ttfamily}l c X}
+  \toprule
+  \normalfont\textbf{Expression} & \textbf{Verdict} & \textbf{Diagnostic (position)} \\
+  \midrule
+  3 + 4 * 2                     & \ok & -- \\
+  (a + b) * c                   & \ok & -- \\
+  \{ [ (1 + 2) * 3 ] - 4 \} / 5 & \ok & -- \\
+  [(x - y) * (x + y)] \textasciicircum{} 2 & \ok & -- \\
+  ((2))                         & \ok & -- \\
+  \midrule
+  (3 + 4                        & \ko & \code{(} jamais fermé (0) \\
+  3 + 4)                        & \ko & \code{)} sans délimiteur ouvrant (5) \\
+  (3 + 4]                       & \ko & \code{]} ne ferme pas \code{(} (6) \\
+  \{ [ ( 1 + 2 ] ) \}           & \ko & \code{]} ne ferme pas \code{(} (12) \\
+  \midrule
+  ( [ 1 + 2 ] )                 & \ko & ordre : \code{[} à l'intérieur de \code{(} (2) \\
+  [ \{ a \} ]                   & \ko & ordre : \code{\{} à l'intérieur de \code{[} (2) \\
+  \midrule
+  3 + * 4                       & \ko & opérateur \code{*} inattendu (4) \\
+  3 4 + 5                       & \ko & opérande \code{4} inattendu (2) \\
+  (3 + )                        & \ko & opérande manquant avant \code{)} (5) \\
+  ()                            & \ko & opérande manquant avant \code{)} (1) \\
+  2 (3 + 4)                     & \ko & \code{(} inattendu, opérateur manquant (2) \\
+  * 3                           & \ko & opérateur \code{*} inattendu (0) \\
+  3 +                           & \ko & expression incomplète (2) \\
+  3 \# 4                        & \ko & caractère non autorisé \code{\#} (2) \\
+  \normalfont(chaîne vide)      & \ko & expression vide (0) \\
+  \bottomrule
+\end{tabularx}
+\caption{Résultats de la vérification (identiques avec \code{PileTableau}
+et \code{PileListe} : 0 différence)}
+\end{table}
+
+Toutes les catégories d'erreurs de la problématique sont détectées, avec
+un message explicite et la position exacte du jeton fautif. Les deux
+implémentations de la pile produisent des verdicts identiques,
+ce qui confirme qu'elles respectent le même contrat.
+
+\subsubsection{Évaluation}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{>{\ttfamily}l r l}
+  \toprule
+  \normalfont\textbf{Expression} & \textbf{Résultat} & \textbf{Propriété vérifiée} \\
+  \midrule
+  3 + 4 * 2                         & 11  & priorité de $\times$ sur $+$ \\
+  (3 + 4) * 2                       & 14  & parenthèses \\
+  \{ [ (1 + 2) * 3 ] - 4 \} / 5     & 1   & délimiteurs imbriqués \\
+  10 - 4 - 3                        & 3   & associativité à gauche \\
+  100 / 10 / 5                      & 2   & associativité à gauche \\
+  2 \textasciicircum{} 3 \textasciicircum{} 2 & 512 & associativité à droite : $2^{(3^2)}$ \\
+  2.5 * 4                           & 10  & nombres décimaux \\
+  1 / (2 - 2)                       & erreur & division par zéro \\
+  x + 1                             & erreur & variable non évaluable \\
+  \bottomrule
+\end{tabular}
+\caption{Résultats de l'évaluation}
+\end{table}
+
+% ===========================================================================
+\section{Exercice 3 : Conversion infixe \texorpdfstring{$\leftrightarrow$}{<->} préfixe}
+
+\subsection{Problématique}
+
+En notation \textbf{infixe} ($a + b$), l'opérateur est placé entre ses
+opérandes : elle est naturelle pour l'humain mais nécessite des parenthèses
+et des règles de priorité. En notation \textbf{préfixe} ou polonaise
+($+\ a\ b$), l'opérateur précède ses opérandes : l'expression est
+\textbf{non ambiguë sans parenthèses} et s'évalue simplement avec une pile.
+Le problème est de passer d'une notation à l'autre :
+\begin{itemize}
+  \item \textbf{infixe $\to$ préfixe} en respectant la priorité et
+        l'associativité (\code{a - b - c} $\to$ \code{- - a b c} mais
+        \code{a \textasciicircum{} b \textasciicircum{} c} $\to$
+        \code{\textasciicircum{} a \textasciicircum{} b c}) ;
+  \item \textbf{préfixe $\to$ infixe} en réintroduisant les parenthèses
+        nécessaires, et en détectant les expressions préfixes mal formées.
+\end{itemize}
+
+\subsection{Méthodologie}
+
+\subsubsection{Infixe vers préfixe}
+
+Nous réutilisons directement le parcours générique à deux piles de
+l'exercice 2, avec \code{V = string} : chaque réduction construit la chaîne
+\og \code{op a b} \fg{}. La conversion vers la notation postfixe s'obtient de
+la même façon avec \og \code{a b op} \fg{}.
+
+\begin{lstlisting}[caption={Conversions obtenues par spécialisation du parcours générique}]
+// Infixe -> préfixe (notation polonaise) : "op a b"
+static std::string versPrefixe(const std::string& expr) {
+    return parcourirInfixe<std::string>(expr,
+        [](const Token& t) { return t.texte; },
+        [](char op, const std::string& a, const std::string& b) {
+            return std::string(1, op) + " " + a + " " + b;
+        });
+}
+
+// Infixe -> postfixe (notation polonaise inverse) : "a b op"
+static std::string versPostfixe(const std::string& expr) {
+    return parcourirInfixe<std::string>(expr,
+        [](const Token& t) { return t.texte; },
+        [](char op, const std::string& a, const std::string& b) {
+            return a + " " + b + " " + std::string(1, op);
+        });
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{clll}
+  \toprule
+  \textbf{Jeton} & \textbf{Action} & \textbf{Pile opérateurs} & \textbf{Pile valeurs} \\
+  \midrule
+  \code{a} & empiler valeur                          & --              & \code{a} \\
+  \code{+} & pile vide : empiler                     & \code{+}        & \code{a} \\
+  \code{b} & empiler valeur                          & \code{+}        & \code{a | b} \\
+  \code{*} & priorité(\code{+}) $<$ priorité(\code{*}) : empiler & \code{+ *} & \code{a | b} \\
+  \code{c} & empiler valeur                          & \code{+ *}      & \code{a | b | c} \\
+  fin      & réduire \code{*}                        & \code{+}        & \code{a | * b c} \\
+  fin      & réduire \code{+}                        & --              & \code{+ a * b c} \\
+  \bottomrule
+\end{tabular}
+\caption{Trace de la conversion de \code{a + b * c} en préfixe}
+\end{table}
+
+\subsubsection{Préfixe vers infixe}
+
+Une expression préfixe se lit \textbf{de droite à gauche} avec une seule
+pile :
+\begin{itemize}
+  \item un opérande est empilé ;
+  \item un opérateur dépile son premier opérande $a$ puis son second $b$,
+        et empile \og \code{(a op b)} \fg{} ;
+  \item à la fin, la pile doit contenir exactement un élément ; sinon
+        l'expression est mal formée (opérandes ou opérateurs manquants).
+\end{itemize}
+Ce parcours est lui aussi générique : avec \code{V = double}, il
+\textbf{évalue} directement l'expression préfixe.
+
+\begin{lstlisting}[caption={Parcours générique d'une expression préfixe}]
+template <typename V>
+static V parcourirPrefixe(const std::string& prefixe,
+                          std::function<V(const std::string&)> feuille,
+                          std::function<V(char, const V&, const V&)> combiner) {
+    // ... découpage de la chaîne en jetons séparés par des espaces ...
+    P<V> valeurs;
+    for (int i = (int)jetons.size() - 1; i >= 0; i--) {
+        const std::string& s = jetons[i];
+        if (s.size() == 1 && estOperateur(s[0])) {
+            if (valeurs.taille() < 2)
+                throw std::invalid_argument("Operandes manquants pour '" + s + "'");
+            V a = valeurs.depiler();   // premier opérande
+            V b = valeurs.depiler();   // second opérande
+            valeurs.empiler(combiner(s[0], a, b));
+        } else if (estNombre(s) || estIdentificateur(s)) {
+            valeurs.empiler(feuille(s));
+        } else {
+            throw std::invalid_argument("Jeton invalide '" + s + "'");
+        }
+    }
+    if (valeurs.taille() != 1)
+        throw std::invalid_argument("Trop d'operandes (operateur manquant)");
+    return valeurs.depiler();
+}
+
+// Préfixe -> infixe (entièrement parenthésée)
+static std::string prefixeVersInfixe(const std::string& prefixe) {
+    std::string s = parcourirPrefixe<std::string>(prefixe,
+        [](const std::string& o) { return o; },
+        [](char op, const std::string& a, const std::string& b) {
+            return "(" + a + " " + std::string(1, op) + " " + b + ")";
+        });
+    // les parenthèses extérieures sont superflues
+    if (s.size() > 1 && s.front() == '(' && s.back() == ')')
+        s = s.substr(1, s.size() - 2);
+    return s;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{cll}
+  \toprule
+  \textbf{Jeton (droite $\to$ gauche)} & \textbf{Action} & \textbf{Pile (sommet à droite)} \\
+  \midrule
+  \code{c} & empiler & \code{c} \\
+  \code{b} & empiler & \code{c | b} \\
+  \code{a} & empiler & \code{c | b | a} \\
+  \code{+} & $a \gets$ \code{a}, $b \gets$ \code{b} & \code{c | (a + b)} \\
+  \code{*} & $a \gets$ \code{(a + b)}, $b \gets$ \code{c} & \code{((a + b) * c)} \\
+  \bottomrule
+\end{tabular}
+\caption{Trace de la conversion de \code{* + a b c} en infixe :
+résultat \code{(a + b) * c}}
+\end{table}
+
+\subsection{Résultats}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{>{\ttfamily}l >{\ttfamily}l >{\ttfamily}l}
+  \toprule
+  \normalfont\textbf{Infixe} & \normalfont\textbf{Préfixe} & \normalfont\textbf{Postfixe} \\
+  \midrule
+  a + b                        & + a b             & a b + \\
+  a + b * c                    & + a * b c         & a b c * + \\
+  (a + b) * c                  & * + a b c         & a b + c * \\
+  a - b - c                    & - - a b c         & a b - c - \\
+  a \textasciicircum{} b \textasciicircum{} c & \textasciicircum{} a \textasciicircum{} b c & a b c \textasciicircum{} \textasciicircum{} \\
+  \{ [ (a + b) * c ] - d \} / e & / - * + a b c d e & a b + c * d - e / \\
+  (x - y) * (x + y) \textasciicircum{} 2 & * - x y \textasciicircum{} + x y 2 & x y - x y + 2 \textasciicircum{} * \\
+  \bottomrule
+\end{tabular}
+\caption{Conversion infixe $\to$ préfixe et postfixe}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{>{\ttfamily}l l}
+  \toprule
+  \normalfont\textbf{Préfixe} & \textbf{Infixe obtenue} \\
+  \midrule
+  + a b               & \code{a + b} \\
+  * + a b c           & \code{(a + b) * c} \\
+  - - a b c           & \code{(a - b) - c} \\
+  - a - b c           & \code{a - (b - c)} \\
+  / - * + a b c d e   & \code{(((a + b) * c) - d) / e} \\
+  \midrule
+  + a                 & erreur : opérandes manquants pour \code{+} \\
+  + a b c             & erreur : trop d'opérandes (opérateur manquant) \\
+  + a \$              & erreur : jeton invalide \code{\$} \\
+  \bottomrule
+\end{tabular}
+\caption{Conversion préfixe $\to$ infixe}
+\end{table}
+
+\paragraph{Vérification croisée.} Pour valider les conversions, chaque
+expression numérique est évaluée de trois manières : directement en
+infixe, via sa forme préfixe, et après un aller-retour
+infixe $\to$ préfixe $\to$ infixe. Les trois valeurs doivent coïncider.
+
+\begin{lstlisting}[style=sortie, caption={Extrait de la sortie de \code{test\_conversion}}]
+  2 ^ 3 ^ 2
+     prefixe = ^ 2 ^ 3 2
+     retour  = 2 ^ (3 ^ 2)
+     valeurs = 512 / 512 / 512   [OK]
+  (8 - 2) * (8 + 2) ^ 2
+     prefixe = * - 8 2 ^ + 8 2 2
+     retour  = (8 - 2) * ((8 + 2) ^ 2)
+     valeurs = 600 / 600 / 600   [OK]
+
+6/6 tests reussis
+\end{lstlisting}
+
+Les six tests croisés réussissent : la conversion préserve la sémantique de
+l'expression, y compris la priorité des opérateurs et l'associativité à
+gauche ($-$, $/$) comme à droite (\code{\textasciicircum}). Les expressions préfixes mal
+formées sont rejetées avec un message explicite.
+
+% ===========================================================================
+\section{Bibliothèque dynamique \texorpdfstring{\code{libpile.so}}{libpile.so} sous Linux}
+\label{sec:bibliotheque}
+
+\subsection{Problématique}
+
+Les piles et l'analyseur doivent être fournis sous forme de
+\textbf{bibliothèque dynamique} : du code compilé une seule fois, chargé au
+lancement par tous les programmes qui l'utilisent. Sous Windows, il s'agit
+d'une DLL (\code{.dll}) ; sous Linux, système utilisé pour ce TP, d'un
+\emph{shared object} (\code{.so}).
+
+La difficulté vient des \textbf{templates}. \code{PileTableau<T>} n'est
+qu'un modèle : le compilateur ne produit du code machine que lorsqu'il est
+utilisé avec un type précis (\code{PileTableau<int>}), c'est
+l'\emph{instanciation}. Dans la première version du TP, tout le code était
+dans les en-têtes (\emph{header-only}) : une bibliothèque compilée à partir
+de ces fichiers aurait été \textbf{vide}, puisqu'aucun type n'y est
+instancié.
+
+\subsection{Méthodologie}
+
+\subsubsection{Séparation déclaration / implémentation}
+
+Chaque classe générique est répartie sur trois fichiers :
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{l X}
+  \toprule
+  \textbf{Fichier} & \textbf{Contenu} \\
+  \midrule
+  \code{PileTableau.h}   & déclaration de la classe et liste des types déjà
+                           compilés dans la bibliothèque (\code{extern template}) \\
+  \code{PileTableau.tpp} & code des méthodes du template, écrit hors de la classe \\
+  \code{PileTableau.cpp} & instanciation explicite pour les types utilisés,
+                           compilé dans \code{libpile.so} \\
+  \bottomrule
+\end{tabularx}
+\end{center}
+
+L'extension \code{.tpp} (\emph{template implementation}) est une
+convention : c'est un fichier destiné à être \textbf{inclus}, jamais
+compilé seul, ce qui le distingue d'un \code{.cpp}.
+
+\begin{lstlisting}[caption={Instanciation explicite (\code{src/PileTableau.cpp}, compilé dans la bibliothèque)}]
+#include "PileTableau.tpp"
+
+template class PileTableau<int>;           // génère ici tout le code de PileTableau<int>
+template class PileTableau<double>;
+template class PileTableau<char>;
+template class PileTableau<std::string>;
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Déclaration vue par les programmes clients (fin de \code{include/PileTableau.h})}]
+// Instanciations fournies par libpile.so : le compilateur ne les régénère
+// pas dans le programme client, il utilise celles de la bibliothèque.
+extern template class PileTableau<int>;
+extern template class PileTableau<double>;
+extern template class PileTableau<char>;
+extern template class PileTableau<std::string>;
+\end{lstlisting}
+
+Le même principe s'applique à \code{PileListe<T>} et à l'analyseur :
+\code{src/Expression.cpp} contient les fonctions utilitaires
+(\code{decouper}, \code{appliquer}, \code{priorite}\dots) et instancie
+\code{PileTableau<Token>}, \code{PileListe<Token>},
+\code{Analyseur<PileTableau>} et \code{Analyseur<PileListe>}.
+
+Une bibliothèque ne peut pas connaître tous les types possibles. Pour le
+type utilisateur \code{Point} de l'exercice 1, \code{test\_pile.cpp}
+inclut \code{PileTableau.tpp} : \code{PileTableau<Point>} est alors généré
+dans le programme lui-même, tandis que \code{PileTableau<int>} provient
+toujours de la bibliothèque.
+
+\subsubsection{Construction de la bibliothèque}
+
+\begin{lstlisting}[style=sortie, caption={Étapes de construction (automatisées par le \code{Makefile})}]
+# 1. objets en code independant de la position (-fPIC)
+g++ -Wall -Wextra -O2 -Iinclude -fPIC -c src/PileTableau.cpp -o obj/PileTableau.o
+g++ -Wall -Wextra -O2 -Iinclude -fPIC -c src/PileListe.cpp   -o obj/PileListe.o
+g++ -Wall -Wextra -O2 -Iinclude -fPIC -c src/Expression.cpp  -o obj/Expression.o
+
+# 2. regroupement des objets dans la bibliotheque partagee
+g++ -shared -Wl,-soname,libpile.so obj/*.o -o libpile.so
+
+# 3. edition de liens d'un programme client avec libpile.so
+g++ -Wall -Wextra -O2 -Iinclude src/test_pile.cpp -L. -lpile -Wl,-rpath,'$ORIGIN' -o test_pile
+\end{lstlisting}
+
+\begin{itemize}
+  \item \code{-fPIC} : une \code{.so} est chargée à une adresse différente
+        à chaque exécution, son code ne doit pas dépendre d'une adresse fixe ;
+  \item \code{-shared} : produit une bibliothèque partagée au lieu d'un
+        exécutable ;
+  \item \code{-L. -lpile} : cherche \code{libpile.so} dans le dossier
+        courant ;
+  \item \code{-Wl,-rpath,'\$ORIGIN'} : enregistre dans l'exécutable qu'il
+        doit chercher la bibliothèque dans son propre dossier, sans avoir à
+        définir \code{LD\_LIBRARY\_PATH}.
+\end{itemize}
+
+\subsection{Résultats}
+
+Les trois programmes de test donnent exactement les mêmes sorties qu'avec la
+version \emph{header-only}. Les outils Linux confirment qu'ils utilisent bien
+la bibliothèque :
+
+\begin{lstlisting}[style=sortie, caption={Vérification de la liaison dynamique}]
+$ ldd test_pile | grep pile
+    libpile.so => .../tp1/libpile.so
+
+$ readelf -d test_expression | grep -E 'NEEDED|RUNPATH'
+    (NEEDED)   Shared library: [libpile.so]
+    (RUNPATH)  Library runpath: [$ORIGIN]
+
+$ nm -DC --undefined-only test_expression | grep Analyseur
+    U Analyseur<PileTableau>::verifier(std::string const&)
+    U Analyseur<PileListe>::evaluer(std::string const&)
+    U Analyseur<PileListe>::verifier(std::string const&)
+\end{lstlisting}
+
+Le symbole \code{U} (\emph{undefined}) indique que \code{test\_expression}
+ne contient pas le code de l'analyseur : il est résolu au lancement dans
+\code{libpile.so}, qui exporte 336 symboles de piles et d'analyseur.
+
+\paragraph{Comparaison avec une bibliothèque statique.} Les mêmes objets
+peuvent être archivés en bibliothèque statique (\code{ar rcs libpile.a
+obj/*.o}), dont le code est \emph{copié} dans l'exécutable à l'édition de
+liens.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\linewidth}{l X X}
+  \toprule
+  & \textbf{Dynamique} (\code{libpile.so}) & \textbf{Statique} (\code{libpile.a}) \\
+  \midrule
+  Taille de \code{test\_expression} & 27 Ko & 175 Ko \\
+  Bibliothèque absente au lancement & erreur : \code{cannot open shared object file} & fonctionne \\
+  Mise à jour de la bibliothèque & remplacer le \code{.so} suffit & refaire l'édition de liens \\
+  Mémoire & une copie partagée entre les programmes & une copie par programme \\
+  \bottomrule
+\end{tabularx}
+\caption{Bibliothèque dynamique et statique (mesures sur le TP)}
+\end{table}
+
+\subsection{Étapes de compilation}
+
+Le dossier \code{compilation\_steps/} contient un programme de démonstration
+(includes, macros, compilation conditionnelle, commentaires, espaces) qui
+utilise \code{libpile.so}. Son \code{Makefile} exécute chaque étape
+séparément et conserve le fichier produit :
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{llll}
+  \toprule
+  \textbf{Étape} & \textbf{Commande} & \textbf{Fichier produit} & \textbf{Observation} \\
+  \midrule
+  prétraitement   & \code{g++ -E} & \code{programme.ii} & 37\,023 lignes, macros remplacées \\
+  compilation     & \code{g++ -S} & \code{programme.s}  & code assembleur x86-64 \\
+  assemblage      & \code{g++ -c} & \code{programme.o}  & méthodes de la pile non définies (\code{U}) \\
+  édition de liens & \code{g++ -lpile} & \code{programme} & lié à \code{libpile.so} (\code{ldd}) \\
+  \bottomrule
+\end{tabular}
+\caption{Fichiers générés dans \code{compilation\_steps/}}
+\end{table}
+
+Après le prétraitement, les commentaires ont disparu, les \code{\#include}
+sont remplacés par le contenu des en-têtes (d'où les 37\,023 lignes, dues
+surtout à \code{<iostream>}), \code{CARRE(i)} devient \code{((i) * (i))} et
+le bloc \code{\#ifdef DEBUG} est supprimé. Le fichier objet
+\code{programme.o} référence \code{PileTableau<int>::empiler} sans le
+définir : c'est l'édition de liens qui le relie à \code{libpile.so}.
+
+% ===========================================================================
+\section{Conclusion}
+
+Ce TP a permis de concevoir une \textbf{pile générique} réutilisable et de
+montrer son intérêt sur un problème concret d'analyse d'expressions.
+
+\begin{itemize}
+  \item La séparation entre l'interface \code{Pile<T>} et ses deux
+        implémentations permet de changer de représentation sans toucher au
+        code client : les analyseurs \code{Analyseur<PileTableau>} et
+        \code{Analyseur<PileListe>} donnent des résultats identiques.
+  \item Le \textbf{tableau dynamique} est environ dix fois plus rapide en
+        pratique grâce à la contiguïté mémoire et au doublement de capacité ;
+        la \textbf{liste chaînée} garantit un $O(1)$ strict par opération.
+  \item La pile rend la vérification des délimiteurs simple et linéaire
+        ($O(n)$) ; couplée à un automate à deux états, elle détecte toutes
+        les erreurs de syntaxe et les localise précisément.
+  \item Un unique algorithme générique à deux piles, paramétré par le type
+        des valeurs et une fonction de combinaison, réalise à la fois
+        l'évaluation et les conversions infixe $\to$ préfixe/postfixe.
+  \item Grâce à l'instanciation explicite des templates et à la séparation
+        \code{.h} / \code{.tpp}, le code est distribué sous forme de
+        bibliothèque dynamique \code{libpile.so} sous Linux : les programmes
+        clients sont plus petits et profitent d'une mise à jour de la
+        bibliothèque sans être recompilés.
+\end{itemize}
+
+\paragraph{Limites et perspectives.} Les opérateurs unaires (par exemple
+$-3$) et les fonctions ($\sin$, $\max$\dots) ne sont pas pris en charge ; ils
+pourraient être ajoutés en enrichissant l'automate d'un état et la table des
+priorités. L'évaluation pourrait également accepter un environnement
+associant une valeur à chaque variable.
+
+% ===========================================================================
+\appendix
+\section{Compilation et exécution}
+
+\begin{lstlisting}[language=make, style=sortie, caption={\code{Makefile}}]
+CXX      = g++
+CXXFLAGS = -Wall -Wextra -O2 -Iinclude
+HEADERS  = $(wildcard include/*.h include/*.tpp)
+PROGS    = test_pile test_expression test_conversion
+
+# Bibliotheque partagee (equivalent Linux d'une DLL)
+LIB      = libpile.so
+LIB_OBJS = obj/PileTableau.o obj/PileListe.o obj/Expression.o
+
+all: $(LIB) $(PROGS)
+
+# -fPIC : code independant de la position, obligatoire dans une .so
+obj/%.o: src/%.cpp $(HEADERS) | obj
+	$(CXX) $(CXXFLAGS) -fPIC -c $< -o $@
+
+$(LIB): $(LIB_OBJS)
+	$(CXX) -shared -Wl,-soname,$(LIB) $^ -o $@
+
+# programmes lies a libpile.so, cherchee dans leur propre dossier
+%: src/%.cpp $(HEADERS) $(LIB)
+	$(CXX) $(CXXFLAGS) $< -L. -lpile -Wl,-rpath,'$$ORIGIN' -o $@
+
+obj:
+	mkdir -p obj
+
+run: all
+	./test_pile && ./test_expression && ./test_conversion
+
+clean:
+	rm -rf obj $(LIB) $(PROGS)
+\end{lstlisting}
+
+\begin{lstlisting}[style=sortie]
+$ make          # compile libpile.so puis les trois programmes
+$ make run      # execute les trois series de tests
+$ make clean    # supprime les fichiers generes
+\end{lstlisting}
+
+\end{document}
