@@ -21,7 +21,6 @@ make clean    # supprime les fichiers générés
 | `include/` | en-têtes (`.h`) et implémentations des templates (`.tpp`) |
 | `src/PileTableau.cpp`, `PileListe.cpp`, `Expression.cpp` | sources de `libpile.so` |
 | `src/test_*.cpp` | programmes de test des trois exercices |
-| `compilation_steps/` | fichiers générés à chaque étape de compilation (`.ii`, `.s`, `.o`, exécutable) |
 | `guide/` | guide PDF : bibliothèques `.so` / `.a` et fichiers `.tpp` |
 | `rapport/` | rapport du TP (LaTeX) |
 

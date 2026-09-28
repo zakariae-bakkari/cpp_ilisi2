@@ -1,7 +1,0 @@
-	linux-vdso.so.1 (0x0000738854b54000)
-	libpile.so => /run/media/zakariae-bakkari/linux/Education/Courses/Prog_Objet_Avancée_et_Design_Patterns/tp/tp1/compilation_steps/4_edition_liens/../../libpile.so (0x0000738854b1d000)
-	libstdc++.so.6 => /usr/lib/x86_64-linux-gnu/libstdc++.so.6 (0x0000738854800000)
-	libgcc_s.so.1 => /usr/lib/x86_64-linux-gnu/libgcc_s.so.1 (0x0000738854ad5000)
-	libc.so.6 => /usr/lib/x86_64-linux-gnu/libc.so.6 (0x0000738854400000)
-	libm.so.6 => /usr/lib/x86_64-linux-gnu/libm.so.6 (0x00007388546da000)
-	/lib64/ld-linux-x86-64.so.2 (0x0000738854b56000)

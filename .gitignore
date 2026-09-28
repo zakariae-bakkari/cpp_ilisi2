@@ -3,3 +3,18 @@
 !/.gitignore
 !/README.md
 !/tp*/
+
+# fichiers générés par make dans chaque TP
+/tp*/obj/
+/tp*/test_*
+*.so
+*.a
+
+# fichiers auxiliaires LaTeX
+*.aux
+*.log
+*.toc
+*.out
+*.synctex.gz
+*.fls
+*.fdb_latexmk
