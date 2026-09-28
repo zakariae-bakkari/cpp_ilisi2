@@ -11,6 +11,7 @@ bibliothèque dynamique `libpile.so` (équivalent Linux d'une DLL).
 ```bash
 make          # construit libpile.so puis les programmes de test
 make run      # exécute test_pile, test_expression, test_conversion
+make etapes   # génère chaque étape de compilation dans compilation/
 make clean    # supprime les fichiers générés
 ```
 
@@ -21,8 +22,21 @@ make clean    # supprime les fichiers générés
 | `include/` | en-têtes (`.h`) et implémentations des templates (`.tpp`) |
 | `src/PileTableau.cpp`, `PileListe.cpp`, `Expression.cpp` | sources de `libpile.so` |
 | `src/test_*.cpp` | programmes de test des trois exercices |
+| `compilation/` | un fichier par étape de compilation (voir ci-dessous) |
 | `guide/` | guide PDF : bibliothèques `.so` / `.a` et fichiers `.tpp` |
 | `rapport/` | rapport du TP (LaTeX) |
+
+## Étapes de compilation (`make etapes`)
+
+| Fichier | Étape | Commande |
+|---|---|---|
+| `test_pile.ii` | prétraitement (includes et macros remplacés) | `g++ -E` |
+| `test_pile.s` | compilation en assembleur x86-64 | `g++ -S` |
+| `test_pile.o` | assemblage en code objet | `g++ -c` |
+| `libpile.a` | bibliothèque statique (archive de `.o`) | `ar rcs` |
+| `libpile.so` | bibliothèque dynamique | `g++ -shared -fPIC` |
+| `test_pile` | exécutable lié dynamiquement à `libpile.so` | `g++ -lpile` |
+| `test_pile_statique` | exécutable contenant le code de `libpile.a` | `g++ test_pile.o libpile.a` |
 
 ## Utiliser la bibliothèque dans un autre programme
 

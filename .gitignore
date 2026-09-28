@@ -9,6 +9,8 @@
 /tp*/test_*
 *.so
 *.a
+# sauf les fichiers de chaque étape de compilation (make etapes), publiés volontairement
+!/tp*/compilation/*
 
 # fichiers auxiliaires LaTeX
 *.aux
