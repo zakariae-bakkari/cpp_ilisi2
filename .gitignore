@@ -4,10 +4,9 @@
 !/README.md
 !/tp*/
 
-# fichiers générés par make dans chaque TP
+# fichiers générés par make dans chaque TP (libpile.so reste publiée)
 /tp*/obj/
 /tp*/test_*
-*.so
 *.a
 # sauf les fichiers de chaque étape de compilation (make etapes), publiés volontairement
 !/tp*/compilation/*
