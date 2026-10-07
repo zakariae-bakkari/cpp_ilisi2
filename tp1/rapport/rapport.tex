@@ -154,7 +154,7 @@ l'adresse : \url{https://github.com/zakariae-bakkari/cpp_ilisi2/tree/main/tp1}.
 \paragraph{Organisation du code.}
 \begin{center}
 \small
-\begin{tabular}{ll}
+\begin{tabularx}{\linewidth}{l X}
   \toprule
   \textbf{Fichier} & \textbf{Rôle} \\
   \midrule
@@ -162,8 +162,9 @@ l'adresse : \url{https://github.com/zakariae-bakkari/cpp_ilisi2/tree/main/tp1}.
   \code{include/PileTableau.h}, \code{.tpp} & tableau dynamique : déclaration, implémentation \\
   \code{include/PileListe.h}, \code{.tpp}   & liste chaînée : déclaration, implémentation \\
   \code{include/Expression.h}, \code{.tpp}  & analyse lexicale, vérification, évaluation, conversions \\
-  \code{src/PileTableau.cpp}, \code{PileListe.cpp}, \code{Expression.cpp}
-                               & sources de la bibliothèque \code{libpile.so} \\
+  \code{src/PileTableau.cpp}   & instanciations de \code{PileTableau<T>} (bibliothèque) \\
+  \code{src/PileListe.cpp}     & instanciations de \code{PileListe<T>} (bibliothèque) \\
+  \code{src/Expression.cpp}    & fonctions utilitaires et \code{Analyseur} (bibliothèque) \\
   \code{src/test\_pile.cpp}       & tests de l'exercice 1 \\
   \code{src/test\_expression.cpp} & tests de l'exercice 2 \\
   \code{src/test\_conversion.cpp} & tests de l'exercice 3 \\
@@ -171,7 +172,7 @@ l'adresse : \url{https://github.com/zakariae-bakkari/cpp_ilisi2/tree/main/tp1}.
   \code{compilation\_steps/}   & fichiers générés à chaque étape de compilation \\
   \code{guide/}                & guide PDF : bibliothèques \code{.so} / \code{.a}, fichiers \code{.tpp} \\
   \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{center}
 
 \noindent Pour la lisibilité, les extraits de code des sections 2 à 4
@@ -428,7 +429,7 @@ d'affectation effectuent une \textbf{copie profonde}. Pour
   \code{depiler}    & $O(1)$ & $O(1)$ \\
   \code{getSommet}  & $O(1)$ & $O(1)$ \\
   copie             & $O(n)$ & $O(n)$ \\
-  mémoire           & entre $n$ et $2n$ cases & $n$ nœuds (valeur + pointeur) \\
+  mémoire           & entre $n$ et $2n$ cases & $n$ n\oe{}uds (valeur + pointeur) \\
   \bottomrule
 \end{tabular}
 \caption{Comparaison théorique des deux implémentations}
@@ -622,7 +623,7 @@ elle-même (paramètre de modèle de modèle) : \code{Analyseur<PileTableau>}
 et \code{Analyseur<PileListe>} exécutent le même algorithme avec
 une représentation différente.
 
-\begin{lstlisting}[caption={Cœur de la méthode \code{verifier}}]
+\begin{lstlisting}[caption={C\oe{}ur de la méthode \code{verifier}}]
 template <template <typename> class P>
 class Analyseur {
 public:
@@ -824,7 +825,7 @@ Chaque erreur est localisée par un curseur \code{\textasciicircum} :
   3 + 4 * 2                     & \ok & -- \\
   (a + b) * c                   & \ok & -- \\
   \{ [ (1 + 2) * 3 ] - 4 \} / 5 & \ok & -- \\
-  [(x - y) * (x + y)] \textasciicircum{} 2 & \ok & -- \\
+  {}[(x - y) * (x + y)] \textasciicircum{} 2 & \ok & -- \\
   ((2))                         & \ok & -- \\
   \midrule
   (3 + 4                        & \ko & \code{(} jamais fermé (0) \\
@@ -833,7 +834,7 @@ Chaque erreur est localisée par un curseur \code{\textasciicircum} :
   \{ [ ( 1 + 2 ] ) \}           & \ko & \code{]} ne ferme pas \code{(} (12) \\
   \midrule
   ( [ 1 + 2 ] )                 & \ko & ordre : \code{[} à l'intérieur de \code{(} (2) \\
-  [ \{ a \} ]                   & \ko & ordre : \code{\{} à l'intérieur de \code{[} (2) \\
+  {}[ \{ a \} ]                   & \ko & ordre : \code{\{} à l'intérieur de \code{[} (2) \\
   \midrule
   3 + * 4                       & \ko & opérateur \code{*} inattendu (4) \\
   3 4 + 5                       & \ko & opérande \code{4} inattendu (2) \\
@@ -1251,12 +1252,13 @@ séparément et conserve le fichier produit :
 \caption{Fichiers générés dans \code{compilation\_steps/}}
 \end{table}
 
+{\sloppy
 Après le prétraitement, les commentaires ont disparu, les \code{\#include}
 sont remplacés par le contenu des en-têtes (d'où les 37\,023 lignes, dues
 surtout à \code{<iostream>}), \code{CARRE(i)} devient \code{((i) * (i))} et
 le bloc \code{\#ifdef DEBUG} est supprimé. Le fichier objet
 \code{programme.o} référence \code{PileTableau<int>::empiler} sans le
-définir : c'est l'édition de liens qui le relie à \code{libpile.so}.
+définir : c'est l'édition de liens qui le relie à \code{libpile.so}.\par}
 
 % ===========================================================================
 \section{Conclusion}
@@ -1293,9 +1295,62 @@ associant une valeur à chaque variable.
 
 % ===========================================================================
 \appendix
-\section{Compilation et exécution}
+\section{Compilation et exécution : le Makefile}
 
-\begin{lstlisting}[language=make, style=sortie, caption={\code{Makefile}}]
+\subsection{Rôle d'un Makefile}
+
+Un \code{Makefile} est un fichier de \textbf{recettes de compilation} lu par
+la commande \code{make}. Il ne remplace pas l'exécutable : il décrit
+\emph{comment le fabriquer}. Sans lui, construire le TP demanderait de taper
+à chaque modification une dizaine de commandes \code{g++} longues, dans le
+bon ordre et sans oublier d'option (\code{-fPIC}, \code{-rpath}\dots).
+
+Son intérêt principal est la \textbf{compilation incrémentale} :
+\code{make} compare la date de modification de chaque fichier avec celle de
+ses dépendances et ne relance que les commandes nécessaires. Si seul
+\code{src/test\_pile.cpp} est modifié, la bibliothèque n'est pas recompilée ;
+si un en-tête change, tout ce qui en dépend est reconstruit.
+
+\subsection{Syntaxe d'une règle}
+
+\begin{lstlisting}[language=make, style=sortie, caption={Forme générale d'une règle}]
+cible: dependances
+	commande qui fabrique la cible a partir des dependances
+\end{lstlisting}
+
+\begin{itemize}
+  \item la \textbf{cible} est le fichier à produire (ou un nom d'action comme
+        \code{clean}) ;
+  \item les \textbf{dépendances} sont les fichiers nécessaires : si l'une
+        d'elles est plus récente que la cible, la commande est relancée ;
+  \item la \textbf{commande} (la \og recette \fg{}) doit commencer par une
+        \textbf{tabulation}, pas par des espaces.
+\end{itemize}
+
+Le Makefile du TP utilise aussi des \textbf{variables}
+(\code{CXX = g++}, utilisée sous la forme \code{\$(CXX)}), des
+\textbf{règles génériques} avec \code{\%} (une seule règle pour tous les
+fichiers \code{src/\%.cpp}) et des \textbf{variables automatiques} :
+
+\begin{center}
+\small
+\begin{tabular}{ll}
+  \toprule
+  \textbf{Variable} & \textbf{Signification} \\
+  \midrule
+  \code{\$@} & la cible de la règle \\
+  \code{\$<} & la première dépendance \\
+  \code{\$\textasciicircum{}} & toutes les dépendances \\
+  \code{| obj} & dépendance \og d'ordre \fg{} : le dossier doit exister,
+                 sa date est ignorée \\
+  \code{.PHONY} & cibles qui ne sont pas des fichiers (\code{all}, \code{run}, \code{clean}\dots) \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Construction de la bibliothèque et des tests}
+
+\begin{lstlisting}[language=make, style=sortie, caption={\code{Makefile} (1/2) : bibliotheque et programmes de test}]
 CXX      = g++
 CXXFLAGS = -Wall -Wextra -O2 -Iinclude
 HEADERS  = $(wildcard include/*.h include/*.tpp)
@@ -1323,15 +1378,120 @@ obj:
 
 run: all
 	./test_pile && ./test_expression && ./test_conversion
+\end{lstlisting}
+
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{l X}
+  \toprule
+  \textbf{Élément} & \textbf{Rôle} \\
+  \midrule
+  \code{CXX}, \code{CXXFLAGS} & compilateur et options communes : avertissements
+      (\code{-Wall -Wextra}), optimisation (\code{-O2}), dossier des en-têtes
+      (\code{-Iinclude}) \\
+  \code{HEADERS} & liste des \code{.h} et \code{.tpp} (fonction \code{wildcard}) :
+      modifier un en-tête déclenche la recompilation de ce qui en dépend \\
+  \code{all} & cible par défaut (lancée par \code{make} seul) : la bibliothèque
+      puis les trois programmes \\
+  \code{obj/\%.o} & compile chaque \code{src/X.cpp} de la bibliothèque en
+      \code{obj/X.o}, avec \code{-fPIC} \\
+  \code{\$(LIB)} & regroupe les trois objets dans \code{libpile.so}
+      (\code{-shared}) \\
+  \code{\%} (programmes) & compile \code{src/test\_X.cpp} en exécutable lié à
+      \code{libpile.so} ; \code{\$\$ORIGIN} est écrit \code{\$\$} car
+      \code{\$} est un caractère spécial pour \code{make} \\
+  \code{obj} & crée le dossier des fichiers objets \\
+  \code{run} & construit tout puis exécute les trois séries de tests \\
+  \bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Cible \texorpdfstring{\code{etapes}}{etapes} : un fichier par étape de compilation}
+
+\begin{lstlisting}[language=make, style=sortie, caption={\code{Makefile} (2/2) : etapes de compilation et nettoyage}]
+ETAPES = compilation
+
+etapes: $(ETAPES)/test_pile.ii $(ETAPES)/test_pile.s $(ETAPES)/test_pile.o \
+        $(ETAPES)/libpile.a $(ETAPES)/libpile.so \
+        $(ETAPES)/test_pile $(ETAPES)/test_pile_statique
+
+# 1. pretraitement : includes recopies, macros remplacees, commentaires supprimes
+$(ETAPES)/%.ii: src/%.cpp $(HEADERS) | $(ETAPES)
+	$(CXX) $(CXXFLAGS) -E $< -o $@
+
+# 2. compilation : C++ pretraite -> assembleur x86-64
+$(ETAPES)/%.s: $(ETAPES)/%.ii
+	$(CXX) $(CXXFLAGS) -S $< -o $@
+
+# 3. assemblage : assembleur -> code objet (non executable)
+$(ETAPES)/%.o: $(ETAPES)/%.s
+	$(CXX) -c $< -o $@
+
+# 4. bibliotheques : archive statique (.a) et bibliotheque partagee (.so)
+$(ETAPES)/libpile.a: $(LIB_OBJS) | $(ETAPES)
+	ar rcs $@ $^
+
+$(ETAPES)/libpile.so: $(LIB) | $(ETAPES)
+	cp $< $@
+
+# 5. edition de liens : dynamique (libpile.so chargee au lancement)
+#    et statique (code de libpile.a copie dans l'executable)
+$(ETAPES)/test_pile: $(ETAPES)/test_pile.o $(ETAPES)/libpile.so
+	$(CXX) $< -L$(ETAPES) -lpile -Wl,-rpath,'$$ORIGIN' -o $@
+
+$(ETAPES)/test_pile_statique: $(ETAPES)/test_pile.o $(ETAPES)/libpile.a
+	$(CXX) $^ -o $@
+
+$(ETAPES):
+	mkdir -p $(ETAPES)
 
 clean:
-	rm -rf obj $(LIB) $(PROGS)
+	rm -rf obj $(LIB) $(PROGS) $(ETAPES)
+
+.PHONY: all run etapes clean
 \end{lstlisting}
+
+La cible \code{etapes} enchaîne les étapes de la compilation de
+\code{test\_pile.cpp} en conservant le fichier produit par chacune dans le
+dossier \code{compilation/}. Chaque règle prend en entrée le fichier de
+l'étape précédente : \code{make} déduit seul l'ordre d'exécution.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\linewidth}{l l r >{\raggedright\arraybackslash}X}
+  \toprule
+  \textbf{Fichier} & \textbf{Commande} & \textbf{Taille} & \textbf{Contenu} \\
+  \midrule
+  \code{test\_pile.ii} & \code{g++ -E} & 1\,084 Ko & code prétraité : 42\,160 lignes
+      (en-têtes recopiés, macros remplacées) \\
+  \code{test\_pile.s} & \code{g++ -S} & 48 Ko & assembleur x86-64 (2\,159 lignes) \\
+  \code{test\_pile.o} & \code{g++ -c} & 29 Ko & code objet ; méthodes de la pile
+      non définies \\
+  \code{libpile.a} & \code{ar rcs} & 328 Ko & bibliothèque statique (archive des
+      trois \code{.o}) \\
+  \code{libpile.so} & \code{g++ -shared} & 210 Ko & bibliothèque dynamique \\
+  \code{test\_pile} & \code{g++ -lpile} & 29 Ko & exécutable lié dynamiquement :
+      charge \code{libpile.so} au lancement \\
+  \code{test\_pile\_statique} & \code{g++ libpile.a} & 58 Ko & exécutable autonome :
+      le code utile de \code{libpile.a} est copié dedans \\
+  \bottomrule
+\end{tabularx}
+\caption{Fichiers générés par \code{make etapes}}
+\end{table}
+
+L'exécutable statique est deux fois plus gros que l'exécutable dynamique,
+mais bien plus petit que \code{libpile.a} : l'éditeur de liens ne copie que
+les fichiers objets de l'archive dont le programme a besoin (les piles, pas
+l'analyseur d'expressions).
+
+\subsection{Utilisation}
 
 \begin{lstlisting}[style=sortie]
 $ make          # compile libpile.so puis les trois programmes
 $ make run      # execute les trois series de tests
-$ make clean    # supprime les fichiers generes
+$ make etapes   # genere un fichier par etape dans compilation/
+$ make clean    # supprime tous les fichiers generes
 \end{lstlisting}
 
 \end{document}
