@@ -1,17 +1,45 @@
-# On ne publie que les dossiers de TP (tp1/, tp2/, ...) et les fichiers de la racine du dépôt
-/*
-!/.gitignore
-!/README.md
-!/tp*/
-
-# fichiers générés par make dans chaque TP (libpile.so reste publiée)
-/tp*/obj/
-/tp*/test_*
+# ==============================================================================
+# FICHIERS COMPILÉS ET OBJETS
+# ==============================================================================
+*.o
+*.so
 *.a
-# sauf les fichiers de chaque étape de compilation (make etapes), publiés volontairement
-!/tp*/compilation/*
+*.exe
+obj/
+bin/
+executables/
+tp*/obj/
+tp*/test_*
 
-# fichiers auxiliaires LaTeX
+# Exécutables spécifiques
+rempl
+remplacement
+plus_long_mot
+recherche_fichier
+test_conversion
+test_expression
+test_pile
+test_pile_statique
+recherche
+main
+exec
+prog
+*.ii
+*.s
+
+# ==============================================================================
+# GROS FICHIERS DE DONNÉES GÉNÉRÉS (> 10 Mo / interdits sur GitHub)
+# ==============================================================================
+fichier10000000.txt
+fichier100000000.txt
+resultat.txt
+data_modifie.txt
+data_vector.txt
+data_list.txt
+
+# ==============================================================================
+# FICHIERS AUXILIAIRES LATEX
+# ==============================================================================
 *.aux
 *.log
 *.toc
@@ -19,3 +47,12 @@
 *.synctex.gz
 *.fls
 *.fdb_latexmk
+
+# ==============================================================================
+# CONFIGURATIONS SYSTÈME ET IDE
+# ==============================================================================
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*~
