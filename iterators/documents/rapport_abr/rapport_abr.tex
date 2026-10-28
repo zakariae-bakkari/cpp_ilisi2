@@ -1,0 +1,347 @@
+\documentclass[11pt,a4paper]{article}
+
+% ------------------------------------------------------------------------------
+% Packages
+% ------------------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{babel,arrows.meta}
+\usepackage{hyperref}
+
+\hypersetup{colorlinks=true, linkcolor=bleu, urlcolor=bleu}
+
+% ------------------------------------------------------------------------------
+% Couleurs
+% ------------------------------------------------------------------------------
+\definecolor{bleu}{HTML}{1E3A8A}
+\definecolor{chemin}{HTML}{2563EB}
+\definecolor{cheminfond}{HTML}{DBEAFE}
+\definecolor{vert}{HTML}{16A34A}
+\definecolor{vertfond}{HTML}{DCFCE7}
+\definecolor{rouge}{HTML}{DC2626}
+\definecolor{rougefond}{HTML}{FEE2E2}
+\definecolor{gris}{HTML}{64748B}
+\definecolor{codefond}{HTML}{F8FAFC}
+\definecolor{codecadre}{HTML}{CBD5E1}
+
+% ------------------------------------------------------------------------------
+% Style du code C++
+% ------------------------------------------------------------------------------
+\lstset{
+  language=C++,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{chemin}\bfseries,
+  commentstyle=\color{gris}\itshape,
+  stringstyle=\color{vert},
+  backgroundcolor=\color{codefond},
+  frame=single,
+  rulecolor=\color{codecadre},
+  breaklines=true,
+  breakatwhitespace=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  tabsize=4,
+  captionpos=b,
+  literate={é}{{\'e}}1 {è}{{\`e}}1 {ê}{{\^e}}1 {à}{{\`a}}1 {ç}{{\c c}}1
+           {ù}{{\`u}}1 {ô}{{\^o}}1 {î}{{\^i}}1 {â}{{\^a}}1 {û}{{\^u}}1 {ë}{{\"e}}1
+           {ï}{{\"i}}1 {É}{{\'E}}1 {À}{{\`A}}1 {Œ}{{\OE}}1 {œ}{{\oe}}1 {²}{{$^2$}}1
+}
+\renewcommand{\lstlistingname}{Code}
+
+% ------------------------------------------------------------------------------
+% Styles TikZ
+% ------------------------------------------------------------------------------
+\tikzset{
+  noeud/.style={circle, draw=black!75, thick, fill=white, minimum size=7mm,
+                inner sep=0pt, font=\small\bfseries},
+  arete/.style={draw=black!45, thick},
+  rbnoir/.style={noeud, draw=black, fill=black!85, text=white},
+  rbrouge/.style={noeud, draw=rouge, fill=rouge, text=white},
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\renewcommand{\arraystretch}{1.15}
+
+\title{\textbf{Arbre Binaire de Recherche (ABR)}\\[4pt]
+       \large Insertion, recherche et comparaison avec \texttt{std::map}}
+\author{Zakariae Bakkari\\
+        \small Programmation Objet Avancée et Design Patterns\\
+        \small\url{https://github.com/zakariae-bakkari/cpp_ilisi2}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+% ==============================================================================
+\section{Objectif}
+% ==============================================================================
+
+Implémenter en C++ un arbre binaire de recherche limité à l'\textbf{insertion} et à la
+\textbf{recherche} (\texttt{src/09\_arbre\_binaire\_recherche.cpp}), y insérer les valeurs
+$1, 2, \dots, 10$ puis des milliers de valeurs croissantes, trouver à quel moment le
+programme \og bloque \fg{}, et le comparer à \texttt{std::map}.
+
+\textbf{Code source :}
+\href{https://github.com/zakariae-bakkari/cpp_ilisi2/blob/main/iterators/src/09_arbre_binaire_recherche.cpp}{\texttt{github.com/zakariae-bakkari/cpp\_ilisi2}}
+(fichier \texttt{iterators/src/09\_arbre\_binaire\_recherche.cpp}).
+
+Règle d'un ABR : pour chaque nœud $x$, les valeurs du sous-arbre \textbf{gauche} sont
+$< x$ et celles du sous-arbre \textbf{droit} sont $> x$. Une opération descend donc un seul
+chemin : son coût dépend de la \textbf{hauteur} $h$ de l'arbre.
+
+% ==============================================================================
+\section{Implémentation}
+% ==============================================================================
+
+\begin{lstlisting}[caption={Nœud, insertion (récursive) et recherche (itérative).}]
+struct Noeud {
+    int valeur;
+    Noeud* gauche;
+    Noeud* droite;
+    Noeud(int val) : valeur(val), gauche(nullptr), droite(nullptr) {}
+};
+
+Noeud* inserer(Noeud* racine, int val) {
+    if (!racine) return new Noeud(val);   // place vide trouvée
+    if (val < racine->valeur)      racine->gauche = inserer(racine->gauche, val);
+    else if (val > racine->valeur) racine->droite = inserer(racine->droite, val);
+    return racine;                        // doublon : rien à faire
+}
+
+Noeud* rechercher(Noeud* racine, int val) {
+    Noeud* courant = racine;
+    while (courant) {
+        if (val == courant->valeur) return courant;
+        courant = (val < courant->valeur) ? courant->gauche : courant->droite;
+    }
+    return nullptr;
+}
+\end{lstlisting}
+
+La hauteur est calculée niveau par niveau avec une file (comme le BFS du programme 07),
+pour ne pas planter elle-même sur un arbre très profond. Pour \texttt{std::map}, la hauteur
+réelle de son arbre est lue dans la mémoire de libstdc++ (fonction \texttt{hauteurMap}).
+
+% ==============================================================================
+\section{Insertion de 1 à 10}
+% ==============================================================================
+
+Chaque nouvelle valeur est plus grande que toutes les autres : dans notre ABR elle part
+toujours à droite et l'arbre devient une \textbf{chaîne}. \texttt{std::map} est un
+\textbf{arbre rouge-noir} : il se rééquilibre après chaque insertion.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[b]{0.40\textwidth}\centering
+\begin{tikzpicture}[scale=0.7, transform shape]
+  \foreach \i in {1,...,10} {
+    \node[noeud] (c\i) at ({(\i-1)*0.75},{-(\i-1)*0.65}) {\i};
+  }
+  \foreach \i [evaluate=\i as \j using int(\i+1)] in {1,...,9} {
+    \draw[arete] (c\i) -- (c\j);
+  }
+\end{tikzpicture}\\[4pt]
+\small\textbf{Notre ABR} : hauteur \textbf{9}
+\end{minipage}
+\hfill
+\begin{minipage}[b]{0.55\textwidth}\centering
+\begin{tikzpicture}[
+    scale=0.8, transform shape,
+    level distance=11mm,
+    level 1/.style={sibling distance=36mm},
+    level 2/.style={sibling distance=18mm},
+    level 3/.style={sibling distance=11mm},
+    edge from parent/.style={arete}]
+  \node[rbnoir] {4}
+    child {node[rbnoir] {2}
+      child {node[rbnoir] {1}}
+      child {node[rbnoir] {3}}}
+    child {node[rbnoir] {6}
+      child {node[rbnoir] {5}}
+      child {node[rbrouge] {8}
+        child {node[rbnoir] {7}}
+        child {node[rbnoir] {9}
+          child[missing]
+          child {node[rbrouge] {10}}}}};
+\end{tikzpicture}\\[4pt]
+\small\textbf{\texttt{std::map}} : hauteur \textbf{4}
+\end{minipage}
+\caption{Les mêmes valeurs $1..10$ insérées dans l'ordre (arbre de droite : celui réellement
+construit par \texttt{std::map}).}
+\end{figure}
+
+Le parcours infixe de notre ABR donne bien $1\ 2 \dots 10$ (la règle d'ordre est respectée),
+mais \texttt{rechercher(10)} et \texttt{rechercher(15)} font \textbf{10 comparaisons},
+comme dans une liste chaînée.
+
+% ==============================================================================
+\section{Des milliers de valeurs croissantes}
+% ==============================================================================
+
+On insère $1, 2, \dots, n$ (compilation \texttt{g++ -O3}). Chaque essai tourne dans un
+processus enfant arrêté après \textbf{10\,000~ms} : au-delà, le programme est considéré
+comme \textbf{bloqué}.
+
+\begin{table}[H]
+\centering
+\begin{minipage}[t]{0.31\textwidth}\centering
+\begin{tabular}{r r r}
+\toprule
+$n$ & \textbf{ABR} & \textbf{map} \\
+\midrule
+10          & 9               & 4 \\
+1\,000      & 999             & 16 \\
+10\,000     & 9\,999          & 23 \\
+30\,000     & 29\,999         & 26 \\
+50\,000     & 49\,999$^*$     & 28 \\
+$10^6$      & 999\,999$^*$    & 36 \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Hauteur $h$.}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.33\textwidth}\centering
+\begin{tabular}{r r r}
+\toprule
+$n$ & \textbf{ABR} & \textbf{map} \\
+\midrule
+10          & 0,02     & 0,01 \\
+1\,000      & 7        & 0,1 \\
+10\,000     & 711      & 1,4 \\
+30\,000     & 6\,954   & 5,2 \\
+50\,000     & \textcolor{rouge}{bloqué} & 8,1 \\
+$10^6$      & \textcolor{rouge}{bloqué} & 430 \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Insertion des $n$ valeurs (ms).}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.31\textwidth}\centering
+\begin{tabular}{r r r}
+\toprule
+$n$ & \textbf{ABR} & \textbf{map} \\
+\midrule
+10          & 10          & 5 \\
+1\,000      & 1\,000      & 17 \\
+10\,000     & 10\,000     & 24 \\
+30\,000     & 30\,000     & 27 \\
+50\,000     & 50\,000     & 29 \\
+$10^6$      & $10^6$      & 37 \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Recherche : comparaisons au pire ($h+1$).}
+\end{minipage}
+\end{table}
+
+{\small $^*$ hauteur théorique ($n-1$) : l'ABR n'a pas pu être construit dans la limite de temps.}
+
+\begin{itemize}
+  \item \textbf{Hauteur} : notre ABR a $h = n - 1$ ; la map reste sous $2\log_2(n+1)$
+        (36 niveaux pour un million de valeurs).
+  \item \textbf{Insertion} : la $i$-ème insertion fait $i-1$ comparaisons, soit
+        $n(n-1)/2$ au total, donc $O(n^2)$ : doubler $n$ multiplie le temps par 4.
+        Notre programme \textbf{bloque entre 30\,000 et 50\,000 valeurs}.
+  \item \textbf{Recherche} : $n$ comparaisons dans la chaîne, au plus 37 dans la map.
+\end{itemize}
+
+% ==============================================================================
+\section{Limite de la pile}
+% ==============================================================================
+
+\texttt{inserer} est récursive : au bout d'une chaîne de hauteur $n$, une insertion empile
+$n$ appels. Quand la pile est pleine, le programme reçoit \texttt{SIGSEGV}
+(\emph{stack overflow}). La profondeur maximale est trouvée par dichotomie (fonction
+\texttt{profondeurMaxPile}).
+
+Machine : Intel Core i5-1135G7, 14~Gio de RAM, Linux, \texttt{g++} 15.2,
+pile de \textbf{8\,192~Ko} (\texttt{ulimit -s}).
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l r}
+\toprule
+\textbf{Configuration} & \textbf{Appels max} \\
+\midrule
+\texttt{-O3}, pile 8~Mio   & 523\,286 \\
+\texttt{-O0}, pile 8~Mio   & 174\,089 \\
+\texttt{-O3}, pile 64~Mio  & 4\,193\,199 \\
+\bottomrule
+\end{tabular}
+\caption{Profondeur maximale de \texttt{inserer} avant le stack overflow.}
+\end{table}
+
+En \texttt{-O3} un appel occupe environ 16 octets, en \texttt{-O0} environ 48. Agrandir la
+pile (\texttt{ulimit -s 65536}) multiplie la limite d'autant, sans supprimer le problème.
+\texttt{std::map} n'a pas cette limite : son insertion est une boucle.
+
+% ==============================================================================
+\section{Différence entre les deux programmes}
+% ==============================================================================
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    etape/.style={rectangle, rounded corners=3pt, draw, thick, minimum width=6.2cm,
+                  minimum height=8mm, align=center, font=\small},
+    fleche/.style={-{Stealth[length=2.5mm]}, thick}]
+  \node[font=\bfseries, text=chemin] at (0,0.8) {Notre programme};
+  \node[etape, draw=chemin, fill=cheminfond] (o1) at (0,0)    {\texttt{racine = inserer(racine, v)}};
+  \node[etape, draw=chemin, fill=cheminfond] (o2) at (0,-1.2) {descente \textbf{récursive}\\(un appel empilé par niveau)};
+  \node[etape, draw=chemin, fill=cheminfond] (o3) at (0,-2.4) {\texttt{nullptr} atteint : \texttt{new Noeud(v)}};
+  \node[etape, draw=chemin, fill=cheminfond] (o4) at (0,-3.6) {\textbf{aucun rééquilibrage}};
+  \node[etape, draw=rouge, fill=rougefond]   (o5) at (0,-4.8) {$h = n - 1$, pile $O(n)$};
+  \foreach \a/\b in {o1/o2, o2/o3, o3/o4, o4/o5} \draw[fleche, chemin] (\a) -- (\b);
+
+  \node[font=\bfseries, text=vert] at (7,0.8) {Programme avec \texttt{std::map}};
+  \node[etape, draw=vert, fill=vertfond] (m1) at (7,0)    {\texttt{m[v] = v}};
+  \node[etape, draw=vert, fill=vertfond] (m2) at (7,-1.2) {descente dans une \textbf{boucle}\\(pile constante)};
+  \node[etape, draw=vert, fill=vertfond] (m3) at (7,-2.4) {feuille atteinte : nœud \textbf{rouge}};
+  \node[etape, draw=vert, fill=vertfond] (m4) at (7,-3.6) {\textbf{rééquilibrage} (couleurs + rotations)};
+  \node[etape, draw=vert, fill=vertfond] (m5) at (7,-4.8) {$h \le 2\log_2(n+1)$, pile $O(1)$};
+  \foreach \a/\b in {m1/m2, m2/m3, m3/m4, m4/m5} \draw[fleche, vert] (\a) -- (\b);
+\end{tikzpicture}
+\caption{Déroulement d'une insertion. Le même schéma est dans le code
+(\texttt{SCHEMA\_ABR\_VS\_MAP}) et affiché par le programme.}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l c c}
+\toprule
+\textbf{Opération} & \textbf{Notre ABR (valeurs triées)} & \textbf{\texttt{std::map}} \\
+\midrule
+Hauteur          & $n - 1$  & $\le 2\log_2(n+1)$ \\
+Recherche        & $O(n)$   & $O(\log n)$ \\
+Insertion        & $O(n)$   & $O(\log n)$ \\
+$n$ insertions   & $O(n^2)$ & $O(n \log n)$ \\
+Pile             & $O(n)$   & $O(1)$ \\
+\bottomrule
+\end{tabular}
+\caption{Complexité.}
+\end{table}
+
+% ==============================================================================
+\section{Conclusion}
+% ==============================================================================
+
+Insérer des valeurs déjà triées transforme notre ABR en liste chaînée : il bloque par
+\textbf{lenteur} entre 30\,000 et 50\,000 valeurs ($O(n^2)$), et sa récursion
+\textbf{déborde la pile} au-delà de 523\,286 niveaux. \texttt{std::map}, grâce au
+rééquilibrage rouge-noir, garde une hauteur de 36 pour un million de valeurs et insère ce
+million en 430~ms. Pour corriger notre ABR : une insertion itérative (plus de stack
+overflow) et un équilibrage (AVL, rouge-noir, ou directement \texttt{std::map}/\texttt{std::set}).
+
+\end{document}
