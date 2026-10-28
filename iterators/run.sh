@@ -26,10 +26,12 @@ while true; do
     echo -e " ${GREEN}5)${NC} ${BOLD}05_benchmark_fichier_vector_vs_list${NC} : Benchmark Worst-case sur fichier (200k lignes)"
     echo -e " ${GREEN}6)${NC} ${BOLD}06_use_cases_reels_vector_vs_list${NC}   : Cas d'usage réels (Étudiants, Undo/Redo, Playlist, E-commerce, Physique)"
     echo -e " ${GREEN}7)${NC} ${BOLD}07_arbre_BFS${NC}                        : Parcours en largeur (BFS) d'un arbre"
-    echo -e " ${YELLOW}8)${NC} ${BOLD}Exécuter tous les benchmarks${NC}    : Lance les benchmarks 04, 05 et 06 à la suite"
+    echo -e " ${GREEN}8)${NC} ${BOLD}08_benchmark_recherche_vector_list_pile${NC} : Recherche début/milieu/fin (vector vs list vs pile)"
+    echo -e " ${GREEN}10)${NC} ${BOLD}09_arbre_binaire_recherche${NC}         : Arbre binaire de recherche (insertion + recherche)"
+    echo -e " ${YELLOW}9)${NC} ${BOLD}Exécuter tous les benchmarks${NC}    : Lance les benchmarks 04, 05, 06 et 08 à la suite"
     echo -e " ${RED}q)${NC} ${BOLD}Quitter${NC}"
     echo -e "${CYAN}----------------------------------------------------------------------${NC}"
-    read -rp " Entrez votre choix [1-8 ou q] : " choice
+    read -rp " Entrez votre choix [1-10 ou q] : " choice
 
     case "$choice" in
         1)
@@ -62,12 +64,22 @@ while true; do
             ./executables/07_arbre_BFS
             ;;
         8)
+            echo -e "\n${YELLOW}>>> Exécution de 08_benchmark_recherche_vector_list_pile :${NC}\n"
+            ./executables/08_benchmark_recherche_vector_list_pile
+            ;;
+        9)
             echo -e "\n${YELLOW}>>> Exécution de 04_benchmark_conteneurs :${NC}\n"
             ./executables/04_benchmark_conteneurs
             echo -e "\n${YELLOW}>>> Exécution de 05_benchmark_fichier_vector_vs_list :${NC}\n"
             ./executables/05_benchmark_fichier_vector_vs_list
             echo -e "\n${YELLOW}>>> Exécution de 06_use_cases_reels_vector_vs_list :${NC}\n"
             ./executables/06_use_cases_reels_vector_vs_list
+            echo -e "\n${YELLOW}>>> Exécution de 08_benchmark_recherche_vector_list_pile :${NC}\n"
+            ./executables/08_benchmark_recherche_vector_list_pile
+            ;;
+        10)
+            echo -e "\n${YELLOW}>>> Exécution de 09_arbre_binaire_recherche :${NC}\n"
+            ./executables/09_arbre_binaire_recherche
             ;;
         q|Q)
             echo -e "\n${GREEN}Au revoir !${NC}\n"
