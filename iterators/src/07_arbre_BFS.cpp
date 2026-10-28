@@ -35,22 +35,54 @@ string afficherContenuFile(queue<Noeud*> f) {
 }
 
 /**
- * @brief Parcours en largeur (Breadth-First Search) d'un arbre binaire avec DEUX FILES.
- * - File 1 (fileAttente) : Nœuds en attente d'exploration (non visités)
- * - File 2 (fileVisites) : Nœuds déjà explorés (visités, dans l'ordre chronologique)
+ * @brief Algorithme de parcours en largeur (BFS) pur et simple.
+ * Utilise deux files :
+ * - fileAttente : file FIFO pour l'exploration niveau par niveau
+ * - fileVisites : file FIFO qui stocke le résultat dans l'ordre de visite
  * 
  * @param racine Pointeur vers la racine de l'arbre
- * @return Une file contenant les nœuds visités dans l'ordre du parcours.
+ * @return Une file contenant les nœuds visités
  */
 queue<Noeud*> parcoursLargeur(Noeud* racine) {
-    queue<Noeud*> fileVisites; // File 2 : stocke les nœuds visités
-    if (!racine) return fileVisites; /* si la racine est nulle, on retourne une file vide */
+    queue<Noeud*> fileVisites;
+    if (!racine) return fileVisites;
 
-    queue<Noeud*> fileAttente; // File 1 : gère l'exploration BFS
-    fileAttente.push(racine);  // On commence par la racine
+    queue<Noeud*> fileAttente;
+    fileAttente.push(racine);
+
+    while (!fileAttente.empty()) {
+        Noeud* courant = fileAttente.front();
+        fileAttente.pop();
+        fileVisites.push(courant);
+
+        if (courant->gauche) {
+            fileAttente.push(courant->gauche);
+        }
+        if (courant->droite) {
+            fileAttente.push(courant->droite);
+        }
+    }
+
+    return fileVisites;
+}
+
+// ==============================================================================
+// FONCTION DE VISUALISATION : TRACÉ DÉTAILLÉ ÉTAPE PAR ÉTAPE
+// ==============================================================================
+
+/**
+ * @brief Fonction séparée dédiée à l'affichage pédagogique du tracé pas à pas.
+ * Permet de visualiser l'état des deux files sans encombrer parcoursLargeur().
+ */
+void tracerParcoursLargeur(Noeud* racine) {
+    queue<Noeud*> fileVisites;
+    if (!racine) return;
+
+    queue<Noeud*> fileAttente;
+    fileAttente.push(racine);
 
     cout << "\n========================================================================================================\n";
-    cout << "  DÉTAIL ÉTAPE PAR ÉTAPE : PARCOURS EN LARGEUR AVEC DEUX FILES (FIFO)\n";
+    cout << "  DÉTAIL ÉTAPE PAR ÉTAPE : ÉTAT DE LA FILE 1 (ATTENTE) ET DE LA FILE 2 (VISITÉS)\n";
     cout << "========================================================================================================\n";
     cout << "| " << left << setw(8)  << "Etape"
          << "| " << left << setw(14) << "Noeud traite"
@@ -66,27 +98,20 @@ queue<Noeud*> parcoursLargeur(Noeud* racine) {
 
     int etape = 1;
     while (!fileAttente.empty()) {
-        Noeud* courant = fileAttente.front(); // On récupère le nœud en tête de la file d'attente
-        fileAttente.pop();                    // On le retire de la file d'attente
-        fileVisites.push(courant);            // On l'ajoute à la file des éléments visités
+        Noeud* courant = fileAttente.front();
+        fileAttente.pop();
+        fileVisites.push(courant);
 
-        // On ajoute les enfants gauche et droit à la file d'attente s'ils existent
-        if (courant->gauche) {
-            fileAttente.push(courant->gauche);
-        }
-        if (courant->droite) {
-            fileAttente.push(courant->droite);
-        }
+        if (courant->gauche) fileAttente.push(courant->gauche);
+        if (courant->droite) fileAttente.push(courant->droite);
 
-        // Affichage de l'état après traitement de ce nœud
+        // Affichage de l'état après traitement
         cout << "| " << left << setw(8)  << ("#" + to_string(etape++))
              << "| " << left << setw(14) << courant->valeur
              << "| " << left << setw(38) << afficherContenuFile(fileAttente)
              << "| " << left << setw(36) << afficherContenuFile(fileVisites) << " |\n";
     }
     cout << "========================================================================================================\n";
-
-    return fileVisites;
 }
 
 /**
@@ -127,15 +152,23 @@ int main() {
     
     racine->droite->droite->droite = new Noeud(6);
 
-    cout << "PARCOURS EN LARGEUR (BFS) DE L'ARBRE :" << endl;
+    cout << "=================================================================" << endl;
+    cout << " 1. PARCOURS EN LARGEUR PUR (parcoursLargeur) :" << endl;
+    cout << "=================================================================" << endl;
     queue<Noeud*> result = parcoursLargeur(racine);
 
-    cout << "\nLecture de la FILE retournee (Ordre chronologique FIFO) :\n  ";
+    cout << "Resultat (visite FIFO) : ";
     while (!result.empty()) {
         cout << result.front()->valeur << " ";
         result.pop();
     }
     cout << "\n\n";
+
+    cout << "=================================================================" << endl;
+    cout << " 2. TRACE ETAPE PAR ETAPE (tracerParcoursLargeur) :" << endl;
+    cout << "=================================================================" << endl;
+    tracerParcoursLargeur(racine);
+    cout << endl;
 
     libererArbre(racine);
     return 0;

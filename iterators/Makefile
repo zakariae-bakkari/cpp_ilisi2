@@ -48,12 +48,18 @@ run_06: $(BIN_DIR)/06_use_cases_reels_vector_vs_list
 run_07: $(BIN_DIR)/07_arbre_BFS
 	./$(BIN_DIR)/07_arbre_BFS
 
-run_benchmarks: run_04 run_05 run_06
+run_08: $(BIN_DIR)/08_benchmark_recherche_vector_list_pile
+	./$(BIN_DIR)/08_benchmark_recherche_vector_list_pile
+
+run_09: $(BIN_DIR)/09_arbre_binaire_recherche
+	./$(BIN_DIR)/09_arbre_binaire_recherche
+
+run_benchmarks: run_04 run_05 run_06 run_08
 
 help:
 	@echo "Cibles disponibles dans ce Makefile :"
 	@echo "  make run (ou make program) : Affiche la liste interactive pour choisir et executer un programme"
 	@echo "  make all                   : Compile tous les fichiers source dans $(BIN_DIR)/"
 	@echo "  make clean                 : Supprime les executables compiles"
-	@echo "  make run_01 ... run_07     : Execute directement un programme precis"
-	@echo "  make run_benchmarks        : Execute les benchmarks 04, 05 et 06"
+	@echo "  make run_01 ... run_09     : Execute directement un programme precis"
+	@echo "  make run_benchmarks        : Execute les benchmarks 04, 05, 06 et 08"
