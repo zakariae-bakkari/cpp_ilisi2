@@ -1,0 +1,693 @@
+\documentclass[11pt,a4paper]{article}
+
+% ------------------------------------------------------------------------------
+% Packages
+% ------------------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{babel,arrows.meta}
+\usepackage{hyperref}
+
+\hypersetup{colorlinks=true, linkcolor=bleu, urlcolor=bleu}
+
+% ------------------------------------------------------------------------------
+% Couleurs
+% ------------------------------------------------------------------------------
+\definecolor{bleu}{HTML}{1E3A8A}
+\definecolor{chemin}{HTML}{2563EB}
+\definecolor{cheminfond}{HTML}{DBEAFE}
+\definecolor{vert}{HTML}{16A34A}
+\definecolor{vertfond}{HTML}{DCFCE7}
+\definecolor{orange}{HTML}{EA580C}
+\definecolor{orangefond}{HTML}{FFEDD5}
+\definecolor{rouge}{HTML}{DC2626}
+\definecolor{gris}{HTML}{64748B}
+\definecolor{codefond}{HTML}{F8FAFC}
+\definecolor{codecadre}{HTML}{CBD5E1}
+
+% ------------------------------------------------------------------------------
+% Style du code C++
+% ------------------------------------------------------------------------------
+\lstset{
+  language=C++,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{chemin}\bfseries,
+  commentstyle=\color{gris}\itshape,
+  stringstyle=\color{vert},
+  backgroundcolor=\color{codefond},
+  frame=single,
+  rulecolor=\color{codecadre},
+  breaklines=true,
+  breakatwhitespace=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  tabsize=4,
+  numbers=left,
+  numberstyle=\tiny\color{gris},
+  captionpos=b,
+}
+\renewcommand{\lstlistingname}{Code}
+
+% ------------------------------------------------------------------------------
+% Styles TikZ
+% ------------------------------------------------------------------------------
+\tikzset{
+  noeud/.style={circle, draw=black!75, thick, fill=white, minimum size=8mm,
+                inner sep=0pt, font=\small\bfseries},
+  actif/.style={noeud, draw=orange, fill=orangefond},
+  neuf/.style={noeud, draw=vert, fill=vertfond},
+  arete/.style={draw=black!45, thick},
+  echange/.style={<->, >={Stealth[length=2.5mm]}, rouge, very thick},
+  case/.style={rectangle, draw=black!60, thick, minimum width=8mm, minimum height=7mm,
+               inner sep=0pt, font=\small\bfseries},
+  noeudcase/.style={fill=white},
+  actifcase/.style={draw=orange, fill=orangefond},
+  neufcase/.style={draw=vert, fill=vertfond},
+  indice/.style={font=\scriptsize, text=gris},
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\renewcommand{\arraystretch}{1.15}
+
+\title{\textbf{Tas max}\\[4pt]
+       \large Insertions et extractions sur 200\,000 valeurs}
+\author{Zakariae Bakkari\\
+        \small Programmation Objet Avancée et Design Patterns\\
+        \small\url{https://github.com/zakariae-bakkari/cpp_ilisi2}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+% ==============================================================================
+\section{Objectif}
+% ==============================================================================
+
+Implémenter un \textbf{tas max} en C++ (\texttt{src/10\_tas\_max.cpp}), y insérer les
+200\,000 valeurs du fichier \texttt{data/data.txt}, puis extraire le maximum jusqu'à vider
+le tas, en mesurant le temps et le nombre d'échanges de chaque phase.
+
+\textbf{Code source :}
+\href{https://github.com/zakariae-bakkari/cpp_ilisi2/blob/main/iterators/src/10_tas_max.cpp}{\texttt{github.com/zakariae-bakkari/cpp\_ilisi2}}
+(fichier \texttt{iterators/src/10\_tas\_max.cpp}, reproduit en entier en annexe).
+Exécution : option \textbf{11} du menu \texttt{./run.sh}, ou \texttt{make run\_10}.
+
+% ==============================================================================
+\section{Un arbre rangé dans un tableau}
+% ==============================================================================
+
+Un tas max est un arbre binaire \textbf{complet} (rempli niveau par niveau, de gauche à
+droite) qui respecte une seule règle : \textbf{chaque parent est plus grand que ses
+enfants}. Le maximum est donc toujours à la racine.
+
+Comme l'arbre est complet, on le range dans un simple \texttt{vector<int>}, sans pointeurs.
+Pour la case $i$ :
+
+\begin{center}
+\begin{tabular}{l l}
+parent        & $(i - 1) / 2$ \\
+enfant gauche & $2i + 1$ \\
+enfant droit  & $2i + 2$ \\
+\end{tabular}
+\end{center}
+
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.5\textwidth}\centering
+\begin{minipage}[t]{0.32\textwidth}\centering
+\begin{tikzpicture}[scale=0.62, transform shape]
+  \draw[arete] (0,0) -- (-1.6,-1.1);
+  \draw[arete] (0,0) -- (1.6,-1.1);
+  \draw[arete] (-1.6,-1.1) -- (-2.4,-2.2);
+  \draw[arete] (-1.6,-1.1) -- (-0.8,-2.2);
+  \draw[arete] (1.6,-1.1) -- (0.8,-2.2);
+  \node[noeud] (n0) at (0,0) {30};
+  \node[noeud] (n1) at (-1.6,-1.1) {15};
+  \node[noeud] (n2) at (1.6,-1.1) {20};
+  \node[noeud] (n3) at (-2.4,-2.2) {4};
+  \node[noeud] (n4) at (-0.8,-2.2) {8};
+  \node[noeud] (n5) at (0.8,-2.2) {10};
+  \node[case, noeudcase] at (-2.00,-3.4) {30};
+  \node[indice] at (-2.00,-3.95) {0};
+  \node[case, noeudcase] at (-1.20,-3.4) {15};
+  \node[indice] at (-1.20,-3.95) {1};
+  \node[case, noeudcase] at (-0.40,-3.4) {20};
+  \node[indice] at (-0.40,-3.95) {2};
+  \node[case, noeudcase] at (0.40,-3.4) {4};
+  \node[indice] at (0.40,-3.95) {3};
+  \node[case, noeudcase] at (1.20,-3.4) {8};
+  \node[indice] at (1.20,-3.95) {4};
+  \node[case, noeudcase] at (2.00,-3.4) {10};
+  \node[indice] at (2.00,-3.95) {5};
+\end{tikzpicture}\\[2pt]
+\small 
+\end{minipage}
+\end{minipage}
+\caption{Le même tas vu comme un arbre et comme le tableau réellement stocké (indices en
+gris). Le parent de la case 5 (10) est la case $(5-1)/2 = 2$ (20).}
+\end{figure}
+
+% ==============================================================================
+\section{Insertion : on ajoute en bas, puis on remonte}
+% ==============================================================================
+
+\begin{lstlisting}[caption={Insertion (\texttt{inserer} et \texttt{monter}).}]
+void inserer(int val) {
+    tas.push_back(val);
+    monter(tas.size() - 1);
+}
+
+void monter(int i) {
+    while (i > 0 && tas[(i - 1) / 2] < tas[i]) {
+        swap(tas[i], tas[(i - 1) / 2]);
+        echanges++;
+        i = (i - 1) / 2;
+    }
+}
+\end{lstlisting}
+
+La nouvelle valeur est placée dans la première case libre (à la fin du tableau). Tant
+qu'elle est plus grande que son parent, on les \textbf{échange} : elle remonte d'un
+niveau. Elle s'arrête quand son parent est plus grand, ou à la racine.
+
+Exemple : on insère dans l'ordre $10, 4, 15, 20, 8, 30$. Voici l'insertion de \textbf{20}
+dans le tas $[15, 4, 10]$ (en vert la valeur qui remonte, en orange la case comparée, en
+rouge l'échange) :
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.32\textwidth}\centering
+\begin{tikzpicture}[scale=0.62, transform shape]
+  \draw[arete] (0,0) -- (-1.6,-1.1);
+  \draw[arete] (0,0) -- (1.6,-1.1);
+  \draw[arete] (-1.6,-1.1) -- (-2.4,-2.2);
+  \node[noeud] (n0) at (0,0) {15};
+  \node[noeud] (n1) at (-1.6,-1.1) {4};
+  \node[noeud] (n2) at (1.6,-1.1) {10};
+  \node[neuf] (n3) at (-2.4,-2.2) {20};
+  \node[case, noeudcase] at (-1.20,-3.4) {15};
+  \node[indice] at (-1.20,-3.95) {0};
+  \node[case, noeudcase] at (-0.40,-3.4) {4};
+  \node[indice] at (-0.40,-3.95) {1};
+  \node[case, noeudcase] at (0.40,-3.4) {10};
+  \node[indice] at (0.40,-3.95) {2};
+  \node[case, neufcase] at (1.20,-3.4) {20};
+  \node[indice] at (1.20,-3.95) {3};
+\end{tikzpicture}\\[2pt]
+\small \textbf{1.} 20 est ajouté à la fin (case 3)
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.32\textwidth}\centering
+\begin{tikzpicture}[scale=0.62, transform shape]
+  \draw[arete] (0,0) -- (-1.6,-1.1);
+  \draw[arete] (0,0) -- (1.6,-1.1);
+  \draw[arete] (-1.6,-1.1) -- (-2.4,-2.2);
+  \node[noeud] (n0) at (0,0) {15};
+  \node[actif] (n1) at (-1.6,-1.1) {4};
+  \node[noeud] (n2) at (1.6,-1.1) {10};
+  \node[neuf] (n3) at (-2.4,-2.2) {20};
+  \draw[echange] (n3) to[bend right=35] (n1);
+  \node[case, noeudcase] at (-1.20,-3.4) {15};
+  \node[indice] at (-1.20,-3.95) {0};
+  \node[case, actifcase] at (-0.40,-3.4) {4};
+  \node[indice] at (-0.40,-3.95) {1};
+  \node[case, noeudcase] at (0.40,-3.4) {10};
+  \node[indice] at (0.40,-3.95) {2};
+  \node[case, neufcase] at (1.20,-3.4) {20};
+  \node[indice] at (1.20,-3.95) {3};
+\end{tikzpicture}\\[2pt]
+\small \textbf{2.} parent = case $(3-1)/2 = 1$ : $4 < 20$, on échange
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.32\textwidth}\centering
+\begin{tikzpicture}[scale=0.62, transform shape]
+  \draw[arete] (0,0) -- (-1.6,-1.1);
+  \draw[arete] (0,0) -- (1.6,-1.1);
+  \draw[arete] (-1.6,-1.1) -- (-2.4,-2.2);
+  \node[actif] (n0) at (0,0) {15};
+  \node[neuf] (n1) at (-1.6,-1.1) {20};
+  \node[noeud] (n2) at (1.6,-1.1) {10};
+  \node[noeud] (n3) at (-2.4,-2.2) {4};
+  \draw[echange] (n1) to[bend right=35] (n0);
+  \node[case, actifcase] at (-1.20,-3.4) {15};
+  \node[indice] at (-1.20,-3.95) {0};
+  \node[case, neufcase] at (-0.40,-3.4) {20};
+  \node[indice] at (-0.40,-3.95) {1};
+  \node[case, noeudcase] at (0.40,-3.4) {10};
+  \node[indice] at (0.40,-3.95) {2};
+  \node[case, noeudcase] at (1.20,-3.4) {4};
+  \node[indice] at (1.20,-3.95) {3};
+\end{tikzpicture}\\[2pt]
+\small \textbf{3.} parent = case 0 : $15 < 20$, on échange
+\end{minipage}
+
+\vspace{6mm}
+
+\begin{minipage}[t]{0.32\textwidth}\centering
+\begin{tikzpicture}[scale=0.62, transform shape]
+  \draw[arete] (0,0) -- (-1.6,-1.1);
+  \draw[arete] (0,0) -- (1.6,-1.1);
+  \draw[arete] (-1.6,-1.1) -- (-2.4,-2.2);
+  \node[neuf] (n0) at (0,0) {20};
+  \node[noeud] (n1) at (-1.6,-1.1) {15};
+  \node[noeud] (n2) at (1.6,-1.1) {10};
+  \node[noeud] (n3) at (-2.4,-2.2) {4};
+  \node[case, neufcase] at (-1.20,-3.4) {20};
+  \node[indice] at (-1.20,-3.95) {0};
+  \node[case, noeudcase] at (-0.40,-3.4) {15};
+  \node[indice] at (-0.40,-3.95) {1};
+  \node[case, noeudcase] at (0.40,-3.4) {10};
+  \node[indice] at (0.40,-3.95) {2};
+  \node[case, noeudcase] at (1.20,-3.4) {4};
+  \node[indice] at (1.20,-3.95) {3};
+\end{tikzpicture}\\[2pt]
+\small \textbf{4.} 20 est à la racine : on s'arrête
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.32\textwidth}\centering
+\begin{tikzpicture}[scale=0.62, transform shape]
+  \draw[arete] (0,0) -- (-1.6,-1.1);
+  \draw[arete] (0,0) -- (1.6,-1.1);
+  \draw[arete] (-1.6,-1.1) -- (-2.4,-2.2);
+  \draw[arete] (-1.6,-1.1) -- (-0.8,-2.2);
+  \node[noeud] (n0) at (0,0) {20};
+  \node[actif] (n1) at (-1.6,-1.1) {15};
+  \node[noeud] (n2) at (1.6,-1.1) {10};
+  \node[noeud] (n3) at (-2.4,-2.2) {4};
+  \node[neuf] (n4) at (-0.8,-2.2) {8};
+  \node[case, noeudcase] at (-1.60,-3.4) {20};
+  \node[indice] at (-1.60,-3.95) {0};
+  \node[case, actifcase] at (-0.80,-3.4) {15};
+  \node[indice] at (-0.80,-3.95) {1};
+  \node[case, noeudcase] at (0.00,-3.4) {10};
+  \node[indice] at (0.00,-3.95) {2};
+  \node[case, noeudcase] at (0.80,-3.4) {4};
+  \node[indice] at (0.80,-3.95) {3};
+  \node[case, neufcase] at (1.60,-3.4) {8};
+  \node[indice] at (1.60,-3.95) {4};
+\end{tikzpicture}\\[2pt]
+\small \textbf{Insérer 8} : parent 15 $> 8$, aucun échange
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.32\textwidth}\centering
+\begin{tikzpicture}[scale=0.62, transform shape]
+  \draw[arete] (0,0) -- (-1.6,-1.1);
+  \draw[arete] (0,0) -- (1.6,-1.1);
+  \draw[arete] (-1.6,-1.1) -- (-2.4,-2.2);
+  \draw[arete] (-1.6,-1.1) -- (-0.8,-2.2);
+  \draw[arete] (1.6,-1.1) -- (0.8,-2.2);
+  \node[neuf] (n0) at (0,0) {30};
+  \node[noeud] (n1) at (-1.6,-1.1) {15};
+  \node[noeud] (n2) at (1.6,-1.1) {20};
+  \node[noeud] (n3) at (-2.4,-2.2) {4};
+  \node[noeud] (n4) at (-0.8,-2.2) {8};
+  \node[noeud] (n5) at (0.8,-2.2) {10};
+  \node[case, neufcase] at (-2.00,-3.4) {30};
+  \node[indice] at (-2.00,-3.95) {0};
+  \node[case, noeudcase] at (-1.20,-3.4) {15};
+  \node[indice] at (-1.20,-3.95) {1};
+  \node[case, noeudcase] at (-0.40,-3.4) {20};
+  \node[indice] at (-0.40,-3.95) {2};
+  \node[case, noeudcase] at (0.40,-3.4) {4};
+  \node[indice] at (0.40,-3.95) {3};
+  \node[case, noeudcase] at (1.20,-3.4) {8};
+  \node[indice] at (1.20,-3.95) {4};
+  \node[case, noeudcase] at (2.00,-3.4) {10};
+  \node[indice] at (2.00,-3.95) {5};
+\end{tikzpicture}\\[2pt]
+\small \textbf{Insérer 30} : 2 échanges (avec 10 puis 20)
+\end{minipage}
+\caption{Insertion pas à pas. Le tableau final est $[30, 15, 20, 4, 8, 10]$.}
+\end{figure}
+
+Une valeur remonte au plus de la hauteur de l'arbre, soit $\log_2 n$ niveaux (17 pour
+200\,000 valeurs). Les $n$ insertions coûtent donc au pire $O(n \log n)$.
+
+% ==============================================================================
+\section{Extraction : on retire la racine, puis on redescend}
+% ==============================================================================
+
+\begin{lstlisting}[caption={Extraction du maximum (\texttt{extraireMax} et \texttt{descendre}).}]
+int extraireMax() {
+    int racine = tas[0];
+    tas[0] = tas.back();
+    tas.pop_back();
+    if (!tas.empty()) descendre(0);
+    return racine;
+}
+
+void descendre(int i) {
+    int n = tas.size();
+    while (true) {
+        int max = i;
+        int g = 2 * i + 1;
+        int d = 2 * i + 2;
+        if (g < n && tas[g] > tas[max]) max = g;
+        if (d < n && tas[d] > tas[max]) max = d;
+        if (max == i) return;
+        swap(tas[i], tas[max]);
+        echanges++;
+        i = max;
+    }
+}
+\end{lstlisting}
+
+Le maximum est la racine. Pour ne pas laisser de trou, on met le \textbf{dernier} élément
+à la racine et on raccourcit le tableau. Cet élément est petit, donc la règle n'est plus
+respectée : on l'\textbf{ajuste} en l'échangeant avec le plus grand de ses deux enfants,
+jusqu'à ce qu'il soit plus grand que ses enfants ou qu'il n'en ait plus.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.32\textwidth}\centering
+\begin{tikzpicture}[scale=0.62, transform shape]
+  \draw[arete] (0,0) -- (-1.6,-1.1);
+  \draw[arete] (0,0) -- (1.6,-1.1);
+  \draw[arete] (-1.6,-1.1) -- (-2.4,-2.2);
+  \draw[arete] (-1.6,-1.1) -- (-0.8,-2.2);
+  \draw[arete] (1.6,-1.1) -- (0.8,-2.2);
+  \node[actif] (n0) at (0,0) {30};
+  \node[noeud] (n1) at (-1.6,-1.1) {15};
+  \node[noeud] (n2) at (1.6,-1.1) {20};
+  \node[noeud] (n3) at (-2.4,-2.2) {4};
+  \node[noeud] (n4) at (-0.8,-2.2) {8};
+  \node[neuf] (n5) at (0.8,-2.2) {10};
+  \node[case, actifcase] at (-2.00,-3.4) {30};
+  \node[indice] at (-2.00,-3.95) {0};
+  \node[case, noeudcase] at (-1.20,-3.4) {15};
+  \node[indice] at (-1.20,-3.95) {1};
+  \node[case, noeudcase] at (-0.40,-3.4) {20};
+  \node[indice] at (-0.40,-3.95) {2};
+  \node[case, noeudcase] at (0.40,-3.4) {4};
+  \node[indice] at (0.40,-3.95) {3};
+  \node[case, noeudcase] at (1.20,-3.4) {8};
+  \node[indice] at (1.20,-3.95) {4};
+  \node[case, neufcase] at (2.00,-3.4) {10};
+  \node[indice] at (2.00,-3.95) {5};
+\end{tikzpicture}\\[2pt]
+\small \textbf{1.} on retire la racine 30, le dernier (10) va prendre sa place
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.32\textwidth}\centering
+\begin{tikzpicture}[scale=0.62, transform shape]
+  \draw[arete] (0,0) -- (-1.6,-1.1);
+  \draw[arete] (0,0) -- (1.6,-1.1);
+  \draw[arete] (-1.6,-1.1) -- (-2.4,-2.2);
+  \draw[arete] (-1.6,-1.1) -- (-0.8,-2.2);
+  \node[neuf] (n0) at (0,0) {10};
+  \node[noeud] (n1) at (-1.6,-1.1) {15};
+  \node[actif] (n2) at (1.6,-1.1) {20};
+  \node[noeud] (n3) at (-2.4,-2.2) {4};
+  \node[noeud] (n4) at (-0.8,-2.2) {8};
+  \draw[echange] (n0) to[bend right=35] (n2);
+  \node[case, neufcase] at (-1.60,-3.4) {10};
+  \node[indice] at (-1.60,-3.95) {0};
+  \node[case, noeudcase] at (-0.80,-3.4) {15};
+  \node[indice] at (-0.80,-3.95) {1};
+  \node[case, actifcase] at (0.00,-3.4) {20};
+  \node[indice] at (0.00,-3.95) {2};
+  \node[case, noeudcase] at (0.80,-3.4) {4};
+  \node[indice] at (0.80,-3.95) {3};
+  \node[case, noeudcase] at (1.60,-3.4) {8};
+  \node[indice] at (1.60,-3.95) {4};
+\end{tikzpicture}\\[2pt]
+\small \textbf{2.} enfants 15 et 20 : le plus grand est 20 $> 10$, on échange
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.32\textwidth}\centering
+\begin{tikzpicture}[scale=0.62, transform shape]
+  \draw[arete] (0,0) -- (-1.6,-1.1);
+  \draw[arete] (0,0) -- (1.6,-1.1);
+  \draw[arete] (-1.6,-1.1) -- (-2.4,-2.2);
+  \draw[arete] (-1.6,-1.1) -- (-0.8,-2.2);
+  \node[noeud] (n0) at (0,0) {20};
+  \node[noeud] (n1) at (-1.6,-1.1) {15};
+  \node[neuf] (n2) at (1.6,-1.1) {10};
+  \node[noeud] (n3) at (-2.4,-2.2) {4};
+  \node[noeud] (n4) at (-0.8,-2.2) {8};
+  \node[case, noeudcase] at (-1.60,-3.4) {20};
+  \node[indice] at (-1.60,-3.95) {0};
+  \node[case, noeudcase] at (-0.80,-3.4) {15};
+  \node[indice] at (-0.80,-3.95) {1};
+  \node[case, neufcase] at (0.00,-3.4) {10};
+  \node[indice] at (0.00,-3.95) {2};
+  \node[case, noeudcase] at (0.80,-3.4) {4};
+  \node[indice] at (0.80,-3.95) {3};
+  \node[case, noeudcase] at (1.60,-3.4) {8};
+  \node[indice] at (1.60,-3.95) {4};
+\end{tikzpicture}\\[2pt]
+\small \textbf{3.} 10 n'a plus d'enfant : on s'arrête, 20 est le nouveau max
+\end{minipage}
+\caption{Extraction du maximum du tas $[30, 15, 20, 4, 8, 10]$.}
+\end{figure}
+
+Une extraction descend au plus de $\log_2 n$ niveaux. Vider le tas demande $n$ extractions,
+donc $O(n \log n)$. Les valeurs sortent dans l'ordre décroissant : c'est le principe du
+\textbf{tri par tas}.
+
+% ==============================================================================
+\section{Résultats}
+% ==============================================================================
+
+Machine : Intel Core i5-1135G7, Linux, \texttt{g++} 15.2, \texttt{-std=c++17 -O3}.
+Le fichier \texttt{data/data.txt} contient $3, 6, 9, \dots, 600\,000$ : 200\,000 valeurs
+\textbf{triées par ordre croissant}. Le programme les utilise telles quelles, puis
+mélangées (\texttt{std::shuffle}, graine 42). La lecture du fichier n'est pas chronométrée.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l r r r r}
+\toprule
+& \multicolumn{2}{c}{\textbf{Temps}} & \multicolumn{2}{c}{\textbf{Échanges}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+\textbf{Ordre des valeurs} & Insertions & Extractions & Insertions & Extractions \\
+\midrule
+Fichier (trié)  & 6,8 ms & 24,8 ms & 3\,137\,875 & 2\,937\,876 \\
+Mélangées       & 6,2 ms & 32,5 ms &   256\,598 & 3\,001\,271 \\
+\bottomrule
+\end{tabular}
+\caption{Sortie du programme (les temps varient d'environ 10\,\% d'une exécution à l'autre ;
+les échanges sont toujours identiques).}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[x=1.6mm, y=7mm]
+  \foreach \nom/\y/\ins/\ext in {Fichier (trié)/1.6/6.8/24.8, Mélangées/0/6.2/32.5} {
+    \node[anchor=east, font=\small] at (-1,\y) {\nom};
+    \fill[chemin]  (0,\y+0.05) rectangle (\ins,\y+0.6);
+    \node[anchor=west, font=\scriptsize] at (\ins,\y+0.33) {\ins\ ms};
+    \fill[orange] (0,\y-0.6) rectangle (\ext,\y-0.05);
+    \node[anchor=west, font=\scriptsize] at (\ext,\y-0.33) {\ext\ ms};
+  }
+  \draw[thick, black!60] (0,-0.9) -- (0,2.4);
+  \fill[chemin] (8,-1.6) rectangle (10,-1.25);
+  \node[anchor=west, font=\small] at (10.5,-1.42) {Insertions};
+  \fill[orange] (24,-1.6) rectangle (26,-1.25);
+  \node[anchor=west, font=\small] at (26.5,-1.42) {Extractions};
+\end{tikzpicture}
+\caption{Temps des deux phases pour 200\,000 valeurs.}
+\end{figure}
+
+\textbf{Interprétation.}
+\begin{itemize}
+  \item \textbf{Insertions, fichier trié : le pire cas.} Chaque nouvelle valeur est plus
+        grande que toutes les autres, donc elle remonte \textbf{jusqu'à la racine} :
+        3\,137\,875 échanges, soit environ 15,7 par valeur (proche de $\log_2 200\,000 \approx 17$).
+  \item \textbf{Insertions, valeurs mélangées.} Une valeur au hasard est en général plus
+        petite que son parent et s'arrête tout de suite : 256\,598 échanges, environ
+        1,3 par valeur, \textbf{12 fois moins}.
+  \item \textbf{Pourtant le temps est presque le même} (6,8 contre 6,2 ms). Cela s'explique probablement ainsi : dans le cas trié,
+        la boucle de \texttt{monter} se comporte toujours de la même façon (le processeur
+        prédit parfaitement le test) et elle parcourt le haut du tableau, qui reste en
+        cache. Dans le cas mélangé, la boucle s'arrête à un moment imprévisible.
+        Avec 200\,000 valeurs, les deux phases d'insertion restent de toute façon très
+        rapides.
+  \item \textbf{Extractions : environ 3 millions d'échanges dans les deux cas.} Le dernier
+        élément placé à la racine est petit et redescend presque jusqu'en bas, quel que
+        soit l'ordre de départ : c'est bien $O(n \log n)$, environ 15 échanges par
+        extraction. C'est la phase la plus lente (3,5 à 5 fois le temps des insertions), car chaque
+        niveau demande deux comparaisons (les deux enfants) au lieu d'une.
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l c c}
+\toprule
+\textbf{Opération} & \textbf{Une fois} & \textbf{$n$ fois} \\
+\midrule
+Insertion (\texttt{monter})               & $O(\log n)$ & $O(n \log n)$ \\
+Extraction du max (\texttt{descendre})    & $O(\log n)$ & $O(n \log n)$ \\
+Lire le max (\texttt{tas[0]})             & $O(1)$      & -- \\
+\bottomrule
+\end{tabular}
+\caption{Complexité.}
+\end{table}
+
+% ==============================================================================
+\section{Conclusion}
+% ==============================================================================
+
+Le tas max se range dans un simple tableau : le parent de la case $i$ est la case
+$(i-1)/2$. L'insertion fait \textbf{remonter} la nouvelle valeur, l'extraction fait
+\textbf{redescendre} le dernier élément placé à la racine, et chacune coûte au plus la
+hauteur de l'arbre, $\log_2 n$. Sur 200\,000 valeurs, les insertions prennent environ 7~ms
+et les extractions environ 25 à 33~ms. Des valeurs triées sont le pire cas des insertions
+en nombre d'échanges (12 fois plus), sans gros écart de temps sur cette taille.
+
+% ==============================================================================
+\appendix
+\section{Code source complet}
+% ==============================================================================
+
+Fichier \href{https://github.com/zakariae-bakkari/cpp_ilisi2/blob/main/iterators/src/10_tas_max.cpp}{\texttt{iterators/src/10\_tas\_max.cpp}},
+identique à celui du dépôt GitHub.
+
+\begin{lstlisting}[caption={\texttt{src/10\_tas\_max.cpp}}]
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <algorithm>
+#include <chrono>
+#include <iomanip>
+#include <random>
+
+using namespace std;
+using namespace std::chrono;
+
+// ==============================================================================
+// TAS MAX : INSERTIONS + EXTRACTIONS SUR LES VALEURS DE data/data.txt
+// ==============================================================================
+
+class TasMax {
+    vector<int> tas;
+    long echanges = 0;
+
+    void monter(int i) {
+        while (i > 0 && tas[(i - 1) / 2] < tas[i]) {
+            swap(tas[i], tas[(i - 1) / 2]);
+            echanges++;
+            i = (i - 1) / 2;
+        }
+    }
+
+    void descendre(int i) {
+        int n = tas.size();
+        while (true) {
+            int max = i;
+            int g = 2 * i + 1;
+            int d = 2 * i + 2;
+            if (g < n && tas[g] > tas[max]) max = g;
+            if (d < n && tas[d] > tas[max]) max = d;
+            if (max == i) return;
+            swap(tas[i], tas[max]);
+            echanges++;
+            i = max;
+        }
+    }
+
+public:
+    void inserer(int val) {
+        tas.push_back(val);
+        monter(tas.size() - 1);
+    }
+
+    int extraireMax() {
+        int racine = tas[0];
+        tas[0] = tas.back();
+        tas.pop_back();
+        if (!tas.empty()) descendre(0);
+        return racine;
+    }
+
+    bool vide() const { return tas.empty(); }
+
+    long prendreEchanges() {
+        long n = echanges;
+        echanges = 0;
+        return n;
+    }
+};
+
+double get_ms(time_point<high_resolution_clock> start, time_point<high_resolution_clock> end) {
+    return duration<double, milli>(end - start).count();
+}
+
+vector<int> lire_fichier(const string& nom) {
+    vector<int> valeurs;
+    ifstream f(nom);
+    if (!f) f.open("../" + nom);
+    int val;
+    while (f >> val) valeurs.push_back(val);
+    return valeurs;
+}
+
+void mesurer(const string& titre, const vector<int>& valeurs) {
+    TasMax tas;
+
+    auto t1 = high_resolution_clock::now();
+    for (int v : valeurs) tas.inserer(v);
+    auto t2 = high_resolution_clock::now();
+    double t_insertions = get_ms(t1, t2);
+    long e_insertions = tas.prendreEchanges();
+
+    t1 = high_resolution_clock::now();
+    while (!tas.vide()) tas.extraireMax();
+    t2 = high_resolution_clock::now();
+    double t_extraction = get_ms(t1, t2);
+    long e_extraction = tas.prendreEchanges();
+
+    cout << "| " << left << setw(20) << titre
+         << "| " << right << setw(10) << fixed << setprecision(3) << t_insertions << " ms "
+         << "| " << right << setw(10) << t_extraction << " ms "
+         << "| " << right << setw(9) << e_insertions << " "
+         << "| " << right << setw(9) << e_extraction << " |\n";
+}
+
+int main(int argc, char* argv[]) {
+    string fichier = argc > 1 ? argv[1] : "data/data.txt";
+    vector<int> valeurs = lire_fichier(fichier);
+    if (valeurs.empty()) {
+        cerr << "Impossible de lire " << fichier << "\n";
+        return 1;
+    }
+
+    vector<int> melangees = valeurs;
+    shuffle(melangees.begin(), melangees.end(), mt19937(42));
+
+    cout << "\n=============================================================================\n";
+    cout << "   TAS MAX -- " << valeurs.size() << " valeurs lues depuis " << fichier << "\n";
+    cout << "=============================================================================\n";
+    cout << "|                     |         Temps                 |       Echanges        |\n";
+    cout << "| " << left << setw(20) << "Ordre des valeurs"
+         << "| " << setw(14) << "Insertions"
+         << "| " << setw(14) << "Extractions"
+         << "| " << setw(10) << "Insert."
+         << "| " << setw(10) << "Extract." << "|\n";
+    cout << "|---------------------|---------------|---------------|-----------|-----------|\n";
+
+    mesurer("Fichier (trie)", valeurs);
+    mesurer("Melangees", melangees);
+
+    cout << "=============================================================================\n";
+    cout << "Insertions  : n insertions avec remontee, O(n log n).\n";
+    cout << "Extractions : extraireMax() jusqu'au tas vide (ajustement), O(n log n).\n";
+
+    return 0;
+}
+\end{lstlisting}
+
+\end{document}

@@ -28,10 +28,11 @@ while true; do
     echo -e " ${GREEN}7)${NC} ${BOLD}07_arbre_BFS${NC}                        : Parcours en largeur (BFS) d'un arbre"
     echo -e " ${GREEN}8)${NC} ${BOLD}08_benchmark_recherche_vector_list_pile${NC} : Recherche début/milieu/fin (vector vs list vs pile)"
     echo -e " ${GREEN}10)${NC} ${BOLD}09_arbre_binaire_recherche${NC}         : Arbre binaire de recherche (insertion + recherche)"
+    echo -e " ${GREEN}11)${NC} ${BOLD}10_tas_max${NC}                         : Tas max (insertions + extractions sur fichier)"
     echo -e " ${YELLOW}9)${NC} ${BOLD}Exécuter tous les benchmarks${NC}    : Lance les benchmarks 04, 05, 06 et 08 à la suite"
     echo -e " ${RED}q)${NC} ${BOLD}Quitter${NC}"
     echo -e "${CYAN}----------------------------------------------------------------------${NC}"
-    read -rp " Entrez votre choix [1-10 ou q] : " choice
+    read -rp " Entrez votre choix [1-11 ou q] : " choice
 
     case "$choice" in
         1)
@@ -80,6 +81,10 @@ while true; do
         10)
             echo -e "\n${YELLOW}>>> Exécution de 09_arbre_binaire_recherche :${NC}\n"
             ./executables/09_arbre_binaire_recherche
+            ;;
+        11)
+            echo -e "\n${YELLOW}>>> Exécution de 10_tas_max :${NC}\n"
+            ./executables/10_tas_max
             ;;
         q|Q)
             echo -e "\n${GREEN}Au revoir !${NC}\n"
