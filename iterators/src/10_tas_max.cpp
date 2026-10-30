@@ -13,10 +13,15 @@ using namespace std::chrono;
 // TAS MAX : INSERTIONS + EXTRACTIONS SUR LES VALEURS DE data/data.txt
 // ==============================================================================
 
+// Tas max range dans un tableau : pour la case i, le parent est en (i-1)/2,
+// les enfants en 2i+1 et 2i+2. Chaque parent est plus grand que ses enfants,
+// donc le maximum est toujours en tas[0].
 class TasMax {
     vector<int> tas;
-    long echanges = 0;
+    long echanges = 0;  // nombre de swaps, pour comparer les cas
 
+    // Fait remonter la case i : tant qu'elle est plus grande que son parent,
+    // on les echange. S'arrete a la racine ou quand le parent est plus grand.
     void monter(int i) {
         while (i > 0 && tas[(i - 1) / 2] < tas[i]) {
             swap(tas[i], tas[(i - 1) / 2]);
@@ -25,6 +30,9 @@ class TasMax {
         }
     }
 
+    // Fait descendre la case i : on l'echange avec le plus grand de ses deux
+    // enfants tant qu'il est plus grand qu'elle. S'arrete quand elle est a sa
+    // place ou qu'elle n'a plus d'enfant.
     void descendre(int i) {
         int n = tas.size();
         while (true) {
@@ -41,11 +49,15 @@ class TasMax {
     }
 
 public:
+    // Insertion : ajoute la valeur dans la premiere case libre (a la fin),
+    // puis la fait remonter. O(log n).
     void inserer(int val) {
         tas.push_back(val);
         monter(tas.size() - 1);
     }
 
+    // Extraction : retire et renvoie la racine (le max). Le dernier element
+    // prend sa place, puis on l'ajuste en le faisant descendre. O(log n).
     int extraireMax() {
         int racine = tas[0];
         tas[0] = tas.back();
@@ -54,8 +66,10 @@ public:
         return racine;
     }
 
+    // Vrai quand le tas ne contient plus aucune valeur.
     bool vide() const { return tas.empty(); }
 
+    // Renvoie le nombre d'echanges depuis le dernier appel, puis le remet a 0.
     long prendreEchanges() {
         long n = echanges;
         echanges = 0;
@@ -63,10 +77,13 @@ public:
     }
 };
 
+// Duree entre deux instants, en millisecondes.
 double get_ms(time_point<high_resolution_clock> start, time_point<high_resolution_clock> end) {
     return duration<double, milli>(end - start).count();
 }
 
+// Lit tous les entiers du fichier (essaie aussi ../ si lance depuis un
+// sous-dossier). Renvoie un vecteur vide si le fichier est introuvable.
 vector<int> lire_fichier(const string& nom) {
     vector<int> valeurs;
     ifstream f(nom);
@@ -76,6 +93,8 @@ vector<int> lire_fichier(const string& nom) {
     return valeurs;
 }
 
+// Insere toutes les valeurs dans un tas, puis extrait le max jusqu'a vider
+// le tas. Affiche une ligne : temps et echanges de chaque phase.
 void mesurer(const string& titre, const vector<int>& valeurs) {
     TasMax tas;
 
@@ -98,6 +117,8 @@ void mesurer(const string& titre, const vector<int>& valeurs) {
          << "| " << right << setw(9) << e_extraction << " |\n";
 }
 
+// Lit data/data.txt (ou le fichier passe en argument), puis mesure le tas
+// sur les valeurs dans l'ordre du fichier (triees) et sur les memes melangees.
 int main(int argc, char* argv[]) {
     string fichier = argc > 1 ? argv[1] : "data/data.txt";
     vector<int> valeurs = lire_fichier(fichier);
