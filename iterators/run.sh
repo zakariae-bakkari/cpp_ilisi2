@@ -29,7 +29,7 @@ while true; do
     echo -e " ${GREEN}8)${NC} ${BOLD}08_benchmark_recherche_vector_list_pile${NC} : Recherche début/milieu/fin (vector vs list vs pile)"
     echo -e " ${GREEN}10)${NC} ${BOLD}09_arbre_binaire_recherche${NC}         : Arbre binaire de recherche (insertion + recherche)"
     echo -e " ${GREEN}11)${NC} ${BOLD}10_tas_max${NC}                         : Tas max (insertions + extractions sur fichier)"
-    echo -e " ${GREEN}12)${NC} ${BOLD}11_tas_max_priority_queue${NC}          : Tas max avec std::priority_queue (memes mesures)"
+    echo -e " ${GREEN}12)${NC} ${BOLD}11_tas_max_comparaison_stl${NC}          : Tas max : priority_queue vs set vs map"
     echo -e " ${YELLOW}9)${NC} ${BOLD}Exécuter tous les benchmarks${NC}    : Lance les benchmarks 04, 05, 06 et 08 à la suite"
     echo -e " ${RED}q)${NC} ${BOLD}Quitter${NC}"
     echo -e "${CYAN}----------------------------------------------------------------------${NC}"
@@ -88,8 +88,8 @@ while true; do
             ./executables/10_tas_max
             ;;
         12)
-            echo -e "\n${YELLOW}>>> Exécution de 11_tas_max_priority_queue :${NC}\n"
-            ./executables/11_tas_max_priority_queue
+            echo -e "\n${YELLOW}>>> Exécution de 11_tas_max_comparaison_stl :${NC}\n"
+            ./executables/11_tas_max_comparaison_stl
             ;;
         q|Q)
             echo -e "\n${GREEN}Au revoir !${NC}\n"
