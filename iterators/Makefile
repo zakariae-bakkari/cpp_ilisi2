@@ -57,8 +57,8 @@ run_09: $(BIN_DIR)/09_arbre_binaire_recherche
 run_10: $(BIN_DIR)/10_tas_max
 	./$(BIN_DIR)/10_tas_max
 
-run_11: $(BIN_DIR)/11_tas_max_comparaison_stl
-	./$(BIN_DIR)/11_tas_max_comparaison_stl
+run_11: $(BIN_DIR)/11_tas_max_priority_queue
+	./$(BIN_DIR)/11_tas_max_priority_queue
 
 run_benchmarks: run_04 run_05 run_06 run_08
 
