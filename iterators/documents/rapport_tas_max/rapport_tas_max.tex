@@ -164,11 +164,15 @@ gris). Le parent de la case 5 (10) est la case $(5-1)/2 = 2$ (20).}
 % ==============================================================================
 
 \begin{lstlisting}[caption={Insertion (\texttt{inserer} et \texttt{monter}).}]
+// Insertion : ajoute la valeur dans la premiere case libre (a la fin),
+// puis la fait remonter. O(log n).
 void inserer(int val) {
     tas.push_back(val);
     monter(tas.size() - 1);
 }
 
+// Fait remonter la case i : tant qu'elle est plus grande que son parent,
+// on les echange. S'arrete a la racine ou quand le parent est plus grand.
 void monter(int i) {
     while (i > 0 && tas[(i - 1) / 2] < tas[i]) {
         swap(tas[i], tas[(i - 1) / 2]);
@@ -340,6 +344,8 @@ Une valeur remonte au plus de la hauteur de l'arbre, soit $\log_2 n$ niveaux (17
 % ==============================================================================
 
 \begin{lstlisting}[caption={Extraction du maximum (\texttt{extraireMax} et \texttt{descendre}).}]
+// Extraction : retire et renvoie la racine (le max). Le dernier element
+// prend sa place, puis on l'ajuste en le faisant descendre. O(log n).
 int extraireMax() {
     int racine = tas[0];
     tas[0] = tas.back();
@@ -348,6 +354,9 @@ int extraireMax() {
     return racine;
 }
 
+// Fait descendre la case i : on l'echange avec le plus grand de ses deux
+// enfants tant qu'il est plus grand qu'elle. S'arrete quand elle est a sa
+// place ou qu'elle n'a plus d'enfant.
 void descendre(int i) {
     int n = tas.size();
     while (true) {
