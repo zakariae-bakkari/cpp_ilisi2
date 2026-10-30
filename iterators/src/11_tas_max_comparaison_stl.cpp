@@ -113,12 +113,13 @@ Temps mesurer_map(const vector<int>& valeurs) {
     return {t_ins, get_ms(t1, t2)};
 }
 
-// Affiche une ligne du tableau.
-void afficher(const string& structure, const string& ordre, Temps t) {
-    cout << "| " << left << setw(16) << structure
-         << "| " << setw(16) << ordre
-         << "| " << right << setw(10) << fixed << setprecision(3) << t.insertions << " ms "
-         << "| " << right << setw(10) << t.extractions << " ms |\n";
+// Affiche une ligne du tableau : une mesure (ordre + phase) pour les trois
+// structures, une colonne par structure.
+void afficher(const string& ligne, double pq, double st, double mp) {
+    cout << "| " << left << setw(27) << ligne << fixed << setprecision(3)
+         << "| " << right << setw(11) << pq << " ms "
+         << "| " << right << setw(11) << st << " ms "
+         << "| " << right << setw(11) << mp << " ms |\n";
 }
 
 // Lit data/data.txt (ou le fichier passe en argument), puis mesure les trois
@@ -134,27 +135,32 @@ int main(int argc, char* argv[]) {
     vector<int> melangees = valeurs;
     shuffle(melangees.begin(), melangees.end(), mt19937(42));
 
-    cout << "\n======================================================================\n";
-    cout << "   TAS MAX / STL -- " << valeurs.size() << " valeurs lues depuis " << fichier << "\n";
-    cout << "======================================================================\n";
-    cout << "| " << left << setw(16) << "Structure"
-         << "| " << setw(16) << "Ordre"
-         << "| " << setw(14) << "Insertions"
-         << "| " << setw(14) << "Extractions" << "|\n";
-    cout << "|-----------------|-----------------|---------------|---------------|\n";
-
-    // Passage non affiche : la premiere structure a noeuds paie la reservation
+    // Passage non mesure : la premiere structure a noeuds paie la reservation
     // de la memoire par le systeme, ce qui fausserait la comparaison.
     mesurer_map(melangees);
 
-    afficher("priority_queue", "Fichier (trie)", mesurer_priority_queue(valeurs));
-    afficher("priority_queue", "Melangees", mesurer_priority_queue(melangees));
-    afficher("set", "Fichier (trie)", mesurer_set(valeurs));
-    afficher("set", "Melangees", mesurer_set(melangees));
-    afficher("map", "Fichier (trie)", mesurer_map(valeurs));
-    afficher("map", "Melangees", mesurer_map(melangees));
+    Temps pq_trie = mesurer_priority_queue(valeurs);
+    Temps pq_mel = mesurer_priority_queue(melangees);
+    Temps set_trie = mesurer_set(valeurs);
+    Temps set_mel = mesurer_set(melangees);
+    Temps map_trie = mesurer_map(valeurs);
+    Temps map_mel = mesurer_map(melangees);
 
-    cout << "======================================================================\n";
+    cout << "\n===================================================================================\n";
+    cout << "   TAS MAX / STL -- " << valeurs.size() << " valeurs lues depuis " << fichier << "\n";
+    cout << "===================================================================================\n";
+    cout << "| " << left << setw(27) << "Ordre + phase"
+         << "| " << setw(15) << "priority_queue"
+         << "| " << setw(15) << "set"
+         << "| " << setw(15) << "map" << "|\n";
+    cout << "|----------------------------|----------------|----------------|----------------|\n";
+
+    afficher("Fichier (trie) insertions", pq_trie.insertions, set_trie.insertions, map_trie.insertions);
+    afficher("Fichier (trie) extractions", pq_trie.extractions, set_trie.extractions, map_trie.extractions);
+    afficher("Melangees insertions", pq_mel.insertions, set_mel.insertions, map_mel.insertions);
+    afficher("Melangees extractions", pq_mel.extractions, set_mel.extractions, map_mel.extractions);
+
+    cout << "===================================================================================\n";
     cout << "priority_queue : tas dans un vector, insertion et extraction O(log n).\n";
     cout << "set / map      : arbre rouge-noir (un noeud alloue par valeur),\n";
     cout << "                 insertion O(log n), max = prev(end()).\n";
