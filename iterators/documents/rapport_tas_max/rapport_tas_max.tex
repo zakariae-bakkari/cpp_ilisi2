@@ -549,16 +549,15 @@ par le système).
 
 \begin{table}[H]
 \centering
-\begin{tabular}{l rr rr}
+\begin{tabular}{l r r r r}
 \toprule
-& \multicolumn{2}{c}{\textbf{Fichier (trié)}} & \multicolumn{2}{c}{\textbf{Mélangées}} \\
-\cmidrule(lr){2-3}\cmidrule(lr){4-5}
-\textbf{Structure} & Insertions & Extractions & Insertions & Extractions \\
+\textbf{Ordre + phase} & \textbf{Notre \texttt{TasMax}} & \textbf{\texttt{priority\_queue}} & \textbf{\texttt{set}} & \textbf{\texttt{map}} \\
 \midrule
-Notre \texttt{TasMax}     & 7,5 ms  & 27 ms & 6,8 ms  & 36 ms \\
-\texttt{priority\_queue}  & 10 ms   & 21 ms & 6 ms    & 28 ms \\
-\texttt{set}              & 50 ms   & 12 ms & 105 ms  & 35 ms \\
-\texttt{map}              & 50 ms   & 13 ms & 140 ms  & 35 ms \\
+Fichier (trié), insertions   & 7,5 ms & 10 ms & 50 ms  & 50 ms \\
+Fichier (trié), extractions  & 27 ms  & 21 ms & 12 ms  & 13 ms \\
+\midrule
+Mélangées, insertions        & 6,8 ms & 6 ms  & 105 ms & 140 ms \\
+Mélangées, extractions       & 36 ms  & 28 ms & 35 ms  & 35 ms \\
 \bottomrule
 \end{tabular}
 \caption{Valeurs typiques sur trois exécutions faites ensemble (programmes 10 et 11). Les
