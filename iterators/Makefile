@@ -57,6 +57,9 @@ run_09: $(BIN_DIR)/09_arbre_binaire_recherche
 run_10: $(BIN_DIR)/10_tas_max
 	./$(BIN_DIR)/10_tas_max
 
+run_11: $(BIN_DIR)/11_tas_max_priority_queue
+	./$(BIN_DIR)/11_tas_max_priority_queue
+
 run_benchmarks: run_04 run_05 run_06 run_08
 
 help:
@@ -64,5 +67,5 @@ help:
 	@echo "  make run (ou make program) : Affiche la liste interactive pour choisir et executer un programme"
 	@echo "  make all                   : Compile tous les fichiers source dans $(BIN_DIR)/"
 	@echo "  make clean                 : Supprime les executables compiles"
-	@echo "  make run_01 ... run_10     : Execute directement un programme precis"
+	@echo "  make run_01 ... run_11     : Execute directement un programme precis"
 	@echo "  make run_benchmarks        : Execute les benchmarks 04, 05, 06 et 08"
