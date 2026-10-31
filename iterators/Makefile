@@ -9,7 +9,7 @@ DOC_DIR = documents
 SRCS = $(wildcard $(SRC_DIR)/*.cpp)
 BINS = $(patsubst $(SRC_DIR)/%.cpp, $(BIN_DIR)/%, $(SRCS))
 
-.PHONY: all clean run program programe menu run_benchmarks help
+.PHONY: all data clean run program programe menu run_benchmarks help
 
 # Cible par defaut : compilation
 all: $(BIN_DIR) $(BINS)
@@ -20,8 +20,14 @@ $(BIN_DIR):
 $(BIN_DIR)/%: $(SRC_DIR)/%.cpp | $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $< -o $@
 
+# Fichier de 10 000 000 valeurs (86 Mo, trop gros pour git) : 3, 6, ..., 30 000 000
+data: $(DATA_DIR)/data_10M.txt
+
+$(DATA_DIR)/data_10M.txt:
+	seq 3 3 30000000 > $@
+
 # Menu interactif de selection
-run program programe menu: all
+run program programe menu: all data
 	@./run.sh
 
 clean:
@@ -54,10 +60,10 @@ run_08: $(BIN_DIR)/08_benchmark_recherche_vector_list_pile
 run_09: $(BIN_DIR)/09_arbre_binaire_recherche
 	./$(BIN_DIR)/09_arbre_binaire_recherche
 
-run_10: $(BIN_DIR)/10_tas_max
+run_10: $(BIN_DIR)/10_tas_max data
 	./$(BIN_DIR)/10_tas_max
 
-run_11: $(BIN_DIR)/11_tas_max_priority_queue
+run_11: $(BIN_DIR)/11_tas_max_priority_queue data
 	./$(BIN_DIR)/11_tas_max_priority_queue
 
 run_benchmarks: run_04 run_05 run_06 run_08
@@ -66,6 +72,7 @@ help:
 	@echo "Cibles disponibles dans ce Makefile :"
 	@echo "  make run (ou make program) : Affiche la liste interactive pour choisir et executer un programme"
 	@echo "  make all                   : Compile tous les fichiers source dans $(BIN_DIR)/"
+	@echo "  make data                  : Cree data/data_10M.txt (10 000 000 valeurs, pour 10 et 11)"
 	@echo "  make clean                 : Supprime les executables compiles"
 	@echo "  make run_01 ... run_11     : Execute directement un programme precis"
 	@echo "  make run_benchmarks        : Execute les benchmarks 04, 05, 06 et 08"

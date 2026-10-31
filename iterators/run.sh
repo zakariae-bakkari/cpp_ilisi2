@@ -12,7 +12,7 @@ BOLD='\033[1m'
 NC='\033[0m' # No Color
 
 # Compilation préalable si nécessaire
-make -s all
+make -s all data
 
 while true; do
     clear

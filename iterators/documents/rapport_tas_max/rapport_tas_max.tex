@@ -82,7 +82,7 @@
 \renewcommand{\arraystretch}{1.15}
 
 \title{\textbf{Tas max}\\[4pt]
-       \large Insertions et extraction du max sur 200\,000 et 1\,000\,000 valeurs, comparaison avec \texttt{std::priority\_queue}}
+       \large Insertions et extraction du max de 200\,000 à 10\,000\,000 valeurs, comparaison avec \texttt{std::priority\_queue}}
 \author{Zakariae Bakkari\\
         \small Programmation Objet Avancée et Design Patterns\\
         \small\url{https://github.com/zakariae-bakkari/cpp_ilisi2}}
@@ -97,11 +97,12 @@
 % ==============================================================================
 
 Implémenter un \textbf{tas max} en C++ (\texttt{src/10\_tas\_max.cpp}), y insérer les
-valeurs d'un fichier (\texttt{data/data.txt}, 200\,000 valeurs, puis
-\texttt{data/data\_1M.txt}, 1\,000\,000 valeurs), puis \textbf{extraire le maximum une
-fois} (retirer la racine, puis réorganiser le tas), en mesurant le temps et le nombre
-d'échanges de chaque phase. Puis comparer avec
-le tas de la STL, \texttt{std::priority\_queue}.
+valeurs d'un fichier (200\,000, 1\,000\,000 puis 10\,000\,000 valeurs), puis mesurer le temps
+et le nombre d'échanges de trois opérations sur le tas construit :
+\textbf{extraire le maximum une fois} (retirer la racine, puis réorganiser le tas),
+\textbf{insérer une valeur qui reste à la fin} (aucune réorganisation) et
+\textbf{insérer une valeur qui remonte jusqu'à la racine} (vérifiée à chaque niveau).
+Puis comparer avec le tas de la STL, \texttt{std::priority\_queue}.
 
 \textbf{Code source :}
 \begin{itemize}
@@ -343,8 +344,16 @@ rouge l'échange) :
 \caption{Insertion pas à pas. Le tableau final est $[30, 15, 20, 4, 8, 10]$.}
 \end{figure}
 
-Une valeur remonte au plus de la hauteur de l'arbre, soit $\log_2 n$ niveaux (17 pour
-200\,000 valeurs). Les $n$ insertions coûtent donc au pire $O(n \log n)$.
+Une insertion a donc un \textbf{meilleur cas} et un \textbf{pire cas}, que le programme
+mesure tous les deux une fois le tas construit :
+\begin{itemize}
+  \item \textbf{la valeur reste à la fin} (comme 8 ci-dessus) : elle est plus petite que
+        son parent, une seule comparaison suffit, \textbf{0 échange}, $O(1)$ ;
+  \item \textbf{la valeur remonte jusqu'à la racine} (comme 30) : elle est plus grande que
+        toutes les autres, il faut la vérifier et l'échanger à chaque niveau,
+        \textbf{$\log_2 n$ échanges} (17 pour 200\,000 valeurs), $O(\log n)$.
+\end{itemize}
+Les $n$ insertions du fichier coûtent donc au pire $O(n \log n)$.
 
 % ==============================================================================
 \section{Extraction : on retire la racine, puis on redescend}
@@ -471,61 +480,71 @@ jusqu'à ce qu'il soit plus grand que ses enfants ou qu'il n'en ait plus.
 
 Une extraction descend au plus de $\log_2 n$ niveaux : elle coûte $O(\log n)$. Après la
 réorganisation, la racine contient le nouveau maximum, prêt pour l'extraction suivante. Le
-programme extrait le maximum \textbf{une seule fois}, après avoir inséré toutes les valeurs.
+programme extrait le maximum \textbf{une seule fois}, après avoir inséré toutes les valeurs,
+puis fait les deux insertions (reste à la fin, jusqu'à la racine).
 
 % ==============================================================================
 \section{Résultats}
 % ==============================================================================
 
-Machine : Intel Core i5-1135G7, Linux, \texttt{g++} 15.2, \texttt{-std=c++17 -O3}.
-Deux fichiers de valeurs \textbf{triées par ordre croissant} : \texttt{data/data.txt}
-($3, 6, \dots, 600\,000$ : 200\,000 valeurs) et \texttt{data/data\_1M.txt}
-($3, 6, \dots, 3\,000\,000$ : 1\,000\,000 valeurs, 5 fois plus). Sans argument, les
-programmes testent les deux à la suite, dans l'ordre du fichier puis mélangées
-(\texttt{std::shuffle}, graine 42). La lecture du fichier n'est pas chronométrée.
+Machine : Intel Core i5-1135G7 (cache L3 de 8~Mo), Linux, \texttt{g++} 15.2,
+\texttt{-std=c++17 -O3}. Trois fichiers de valeurs \textbf{triées par ordre croissant}
+($3, 6, 9, \dots$) : \texttt{data/data.txt} (200\,000 valeurs), \texttt{data/data\_1M.txt}
+(1\,000\,000) et \texttt{data/data\_10M.txt} (10\,000\,000, 86~Mo, trop gros pour GitHub :
+il est créé par \texttt{make data}). Sans argument, les programmes testent les trois à la
+suite, dans l'ordre du fichier puis mélangées (\texttt{std::shuffle}, graine 42). La lecture
+du fichier n'est pas chronométrée.
 
 \begin{table}[H]
 \centering
-\small
-\begin{tabular}{l l r r r r r}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{l l rr rr rr rr}
 \toprule
-& & \multicolumn{2}{c}{\textbf{Temps}} & \multicolumn{2}{c}{\textbf{Échanges}} & \textbf{Max extrait} \\
-\cmidrule(lr){3-4}\cmidrule(lr){5-6}
-$n$ & \textbf{Ordre} & Insertions & Extr. max & Insertions & Extr. max & \textbf{$\to$ nouveau max} \\
+& & \multicolumn{2}{c}{\textbf{Insertion des $n$}} & \multicolumn{2}{c}{\textbf{Extraction du max}}
+  & \multicolumn{2}{c}{\textbf{Reste à la fin}} & \multicolumn{2}{c}{\textbf{Jusqu'à la racine}} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}\cmidrule(lr){9-10}
+$n$ & \textbf{Ordre} & temps & échanges & temps & éch. & temps & éch. & temps & éch. \\
 \midrule
-200\,000      & trié     & 7,9 ms  & 0,39~$\mu$s & 3\,137\,875  & 16 & 600\,000 $\to$ 599\,997 \\
-              & mélangé  & 6,7 ms  & 0,81~$\mu$s & 256\,598     & 17 & 600\,000 $\to$ 599\,997 \\
+200\,000     & trié    & 10,7 ms & 3\,137\,875   & 0,38~$\mu$s & 16 & 0,11~$\mu$s & 0 & 0,23~$\mu$s & 17 \\
+             & mélangé & 8,5 ms  & 256\,598      & 1,22~$\mu$s & 17 & 0,10~$\mu$s & 0 & 0,18~$\mu$s & 17 \\
 \midrule
-1\,000\,000   & trié     & 43,1 ms & 0,43~$\mu$s & 17\,951\,445 & 18 & 3\,000\,000 $\to$ 2\,999\,997 \\
-              & mélangé  & 33,6 ms & 0,63~$\mu$s & 1\,283\,444  & 19 & 3\,000\,000 $\to$ 2\,999\,997 \\
+1\,000\,000  & trié    & 56,8 ms & 17\,951\,445  & 0,40~$\mu$s & 18 & 0,09~$\mu$s & 0 & 0,23~$\mu$s & 19 \\
+             & mélangé & 40,6 ms & 1\,283\,444   & 1,20~$\mu$s & 19 & 0,09~$\mu$s & 0 & 0,21~$\mu$s & 19 \\
+\midrule
+10\,000\,000 & trié    & 711 ms  & 213\,222\,809 & 0,56~$\mu$s & 22 & 0,10~$\mu$s & 0 & 0,22~$\mu$s & 23 \\
+             & mélangé & 453 ms  & 12\,813\,107  & 3,97~$\mu$s & 22 & 0,10~$\mu$s & 0 & 0,24~$\mu$s & 23 \\
 \bottomrule
 \end{tabular}
-\caption{Sortie du programme 10, médianes sur 15 exécutions (les échanges et les valeurs
-sont toujours identiques).}
+\caption{Sortie du programme 10, médianes sur 15 exécutions (les échanges sont toujours
+identiques). Max extrait : 600\,000, 3\,000\,000 et 30\,000\,000 ; nouveau max après
+réorganisation : 599\,997, 2\,999\,997 et 29\,999\,997.}
 \end{table}
 
 \textbf{Interprétation.}
 \begin{itemize}
-  \item \textbf{Insertions, fichier trié : le pire cas.} Chaque nouvelle valeur est plus
-        grande que toutes les autres, donc elle remonte \textbf{jusqu'à la racine} :
-        15,7 échanges par valeur pour 200\,000 valeurs, 18 pour 1\,000\,000 (proche de
-        $\log_2 n$ : 17,6 et 19,9).
-  \item \textbf{Insertions, valeurs mélangées.} Une valeur au hasard s'arrête presque tout
-        de suite : 1,3 échange par valeur, \textbf{quel que soit $n$}, soit 12 à 14 fois
-        moins que le cas trié. Pourtant le temps est proche (7,9 contre 6,7~ms ;
-        43 contre 34~ms) : probablement parce que, dans le cas trié, la boucle de
-        \texttt{monter} se comporte toujours de la même façon (le processeur prédit
-        parfaitement le test) et parcourt le haut du tableau, qui reste en cache.
-  \item \textbf{5 fois plus de valeurs $\to$ environ 5,4 fois plus de temps} pour les
-        insertions triées (7,9 $\to$ 43~ms) : un peu plus que $\times 5$, comme le prévoit
-        $O(n \log n)$ ($5 \times 19{,}9 / 17{,}6 \approx 5{,}7$).
-  \item \textbf{Extraction du max : 16 à 19 échanges, moins d'une microseconde.} Le dernier
-        élément placé à la racine redescend presque jusqu'en bas, soit $\log_2 n$ niveaux.
-        Avec 5 fois plus de valeurs, seulement \textbf{2 échanges de plus} et un temps
-        presque identique : c'est tout l'intérêt du $O(\log n)$. Après la réorganisation, le
-        nouveau max (599\,997 ou 2\,999\,997) est bien à la racine.
-  \item Une seule extraction dure si peu (0,4 à 0,8~$\mu$s) que sa mesure varie beaucoup
-        d'une exécution à l'autre : d'où les médianes.
+  \item \textbf{Insertions, fichier trié : le pire cas.} Chaque valeur remonte
+        \textbf{jusqu'à la racine} : 15,7 échanges par valeur pour 200\,000 valeurs, 21,3
+        pour 10\,000\,000 ($\log_2 n$ : 17,6 et 23,3). Mélangées, une valeur s'arrête
+        presque tout de suite : 1,3 échange par valeur, \textbf{quel que soit $n$}.
+  \item \textbf{Avec plus de données, l'écart trié / mélangé grandit} : le cas trié est
+        1,25 fois plus lent à 200\,000 valeurs, 1,4 fois à 1\,000\,000 et \textbf{1,6 fois
+        à 10\,000\,000} (711 contre 453~ms). Probablement parce que le tableau (0,8~Mo, puis
+        4~Mo) tient d'abord dans le cache du processeur, ce qui rend les échanges
+        supplémentaires peu coûteux, alors qu'à 10\,000\,000 valeurs il fait 40~Mo et ne
+        tient plus dans les 8~Mo du cache L3.
+  \item \textbf{Insertion qui reste à la fin : 0 échange, environ 0,1~$\mu$s, quel que soit
+        $n$.} Une seule comparaison avec le parent suffit : c'est le meilleur cas, $O(1)$.
+  \item \textbf{Insertion jusqu'à la racine : $\log_2 n$ échanges} (17, 19 puis 23) et
+        environ 0,2~$\mu$s. Multiplier $n$ par 50 n'ajoute que 6 échanges : c'est le
+        $O(\log n)$. Elle reste plus rapide qu'une extraction, qui compare deux enfants à
+        chaque niveau au lieu d'un parent.
+  \item \textbf{Extraction du max : 16 à 22 échanges}, moins d'une microseconde sur le
+        fichier trié. Sur les valeurs mélangées à 10\,000\,000, elle monte à 4~$\mu$s : le
+        chemin descendu traverse des cases éloignées en mémoire (même explication de cache,
+        non vérifiée).
+  \item Ces opérations uniques durent 0,1 à 4~$\mu$s, près de la précision de l'horloge :
+        leur mesure varie beaucoup d'une exécution à l'autre, d'où les médianes.
 \end{itemize}
 
 % ==============================================================================
@@ -536,58 +555,67 @@ La STL fournit déjà un tas max : \texttt{std::priority\_queue<int>}. Il range 
 valeurs dans un \texttt{vector}, et \texttt{top()} renvoie toujours le maximum. Le
 programme 11 contient les \textbf{deux versions dans le même fichier} (notre classe
 \texttt{TasMax}, sans le compteur d'échanges, et \texttt{priority\_queue}) et les mesure
-l'une après l'autre sur les mêmes valeurs (insertions, puis une extraction du max), puis
-affiche la plus rapide :
+l'une après l'autre sur les mêmes valeurs (les mêmes quatre mesures que le programme 10),
+puis affiche la plus rapide. \texttt{push(v)} remplace \texttt{inserer(v)},
+\texttt{top()} remplace \texttt{max()} et \texttt{pop()} remplace \texttt{extraireMax()}.
 
 \begin{table}[H]
 \centering
-\begin{tabular}{l l l}
+\small
+\begin{tabular}{l l r r r}
 \toprule
-\textbf{Opération} & \textbf{Notre \texttt{TasMax}} & \textbf{\texttt{priority\_queue}} \\
+\textbf{Ordre} & \textbf{Mesure} & \textbf{200\,000} & \textbf{1\,000\,000} & \textbf{10\,000\,000} \\
 \midrule
-Insérer          & \texttt{inserer(v)}     & \texttt{push(v)} \\
-Lire le max      & \texttt{max()}          & \texttt{top()} \\
-Retirer le max   & \texttt{extraireMax()}  & \texttt{pop()} \\
+trié    & insertion des $n$ valeurs  & \textbf{T} $\times 1{,}46$ & \textbf{T} $\times 1{,}43$ & \textbf{T} $\times 1{,}40$ \\
+        & extraction du max          & \textbf{T} $\times 1{,}10$ & $=$ & $=$ \\
+        & insertion qui reste à la fin & $=$ & $=$ & $=$ \\
+        & insertion jusqu'à la racine  & $=$ & $=$ & $=$ \\
+\midrule
+mélangé & insertion des $n$ valeurs  & \textbf{T} $\times 1{,}06$ & \textbf{T} $\times 1{,}08$ & \textbf{T} $\times 1{,}06$ \\
+        & extraction du max          & $=$ & $=$ & $=$ \\
+        & insertion qui reste à la fin & $=$ & $=$ & $=$ \\
+        & insertion jusqu'à la racine  & $=$ & $=$ & $=$ \\
 \bottomrule
 \end{tabular}
-\caption{Les deux versions, opération par opération (toutes en $O(\log n)$, sauf lire le max en $O(1)$).}
+\caption{Sortie du programme 11 sur 15 exécutions. \textbf{T} : notre \texttt{TasMax} plus
+rapide (rapport des médianes), quand il gagne au moins 11 exécutions sur 15 ; $=$ : égalité
+(aucune version ne gagne plus de 10 fois sur 15). \texttt{priority\_queue} ne gagne
+nettement aucune mesure.}
 \end{table}
 
 \begin{table}[H]
 \centering
 \small
-\begin{tabular}{l l r r l r}
+\begin{tabular}{l rr rr}
 \toprule
-$n$ & \textbf{Ordre + phase} & \textbf{\texttt{TasMax}} & \textbf{\texttt{priority\_queue}} & \textbf{Plus rapide} & \textbf{Victoires} \\
+& \multicolumn{2}{c}{\textbf{Trié}} & \multicolumn{2}{c}{\textbf{Mélangé}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+$n$ & \texttt{TasMax} & \texttt{priority\_queue} & \texttt{TasMax} & \texttt{priority\_queue} \\
 \midrule
-200\,000    & trié, insertions        & 7,4 ms      & 10,3 ms     & \texttt{TasMax} $\times 1{,}4$  & 15 / 15 \\
-            & trié, extraction max    & 0,30~$\mu$s & 0,38~$\mu$s & \texttt{TasMax} $\times 1{,}25$ & 15 / 15 \\
-            & mélangé, insertions     & 6,8 ms      & 6,8 ms      & égalité                         & 8 / 7 \\
-            & mélangé, extraction max & 0,44~$\mu$s & 0,63~$\mu$s & égalité (très variable)         & 9 / 6 \\
-\midrule
-1\,000\,000 & trié, insertions        & 43,0 ms     & 58,2 ms     & \texttt{TasMax} $\times 1{,}35$ & 15 / 15 \\
-            & trié, extraction max    & 0,33~$\mu$s & 0,37~$\mu$s & \texttt{TasMax} $\times 1{,}1$  & 12 / 15 \\
-            & mélangé, insertions     & 33,4 ms     & 33,1 ms     & égalité                         & 8 / 7 \\
-            & mélangé, extraction max & 0,47~$\mu$s & 0,49~$\mu$s & égalité                         & 7 / 8 \\
+200\,000     & 10,4 ms & 15,1 ms & 8,7 ms  & 9,3 ms \\
+1\,000\,000  & 56,9 ms & 81,2 ms & 41,4 ms & 44,6 ms \\
+10\,000\,000 & 707 ms  & 990 ms  & 454 ms  & 483 ms \\
 \bottomrule
 \end{tabular}
-\caption{Sortie du programme 11, médianes sur 15 exécutions. \og Victoires \fg{} : combien
-d'exécutions la première version a gagnées contre la seconde.}
+\caption{Temps d'insertion des $n$ valeurs (médianes, programme 11).}
 \end{table}
 
 \textbf{Interprétation.}
 \begin{itemize}
   \item \textbf{Même structure, mêmes ordres de grandeur.} Les deux versions sont un tas
         dans un \texttt{vector} et font le même travail : $O(\log n)$ par opération.
-  \item \textbf{Fichier trié : notre version gagne, sur les deux tailles.} Elle insère
-        1,35 à 1,4 fois plus vite à chaque exécution (15 sur 15) ; avec 1\,000\,000 de
-        valeurs l'écart se voit mieux : 15~ms de moins (43 contre 58~ms). Elle extrait aussi
-        le max un peu plus vite (12 à 15 victoires sur 15).
-  \item \textbf{Valeurs mélangées : égalité.} Sur les deux tailles, aucune version ne se
-        détache, ni pour les insertions (8 victoires contre 7) ni pour l'extraction.
+  \item \textbf{Insertion des $n$ valeurs : notre version gagne, sur les trois tailles.}
+        1,4 fois plus vite sur le fichier trié, à chaque exécution (15 sur 15) : à
+        10\,000\,000 valeurs, cela fait \textbf{283~ms de moins} (707 contre 990~ms). Sur les
+        valeurs mélangées, l'avance est faible mais régulière ($\times 1{,}06$ à $1{,}08$,
+        13 ou 14 victoires sur 15).
+  \item \textbf{Opérations uniques : égalité.} Extraire le max, insérer une valeur qui reste
+        à la fin ou qui remonte jusqu'à la racine prend 0,1 à 4~$\mu$s : les deux versions
+        font les mêmes comparaisons et les mêmes échanges, et l'écart se perd dans la
+        précision de la mesure.
   \item \textbf{\texttt{priority\_queue} est-elle meilleure partout ?} Non, pas sur ces
-        mesures : même avec 1\,000\,000 de valeurs, elle n'est jamais nettement plus rapide,
-        et elle perd sur le fichier trié.
+        mesures : même avec 10\,000\,000 de valeurs, elle n'est jamais nettement plus rapide,
+        et elle perd l'insertion des $n$ valeurs.
         Elle reste le bon choix en pratique (déjà écrite, testée et générique) ; écrire
         notre propre tas permet de comprendre ce qu'elle fait et de compter les échanges,
         ce que \texttt{priority\_queue} ne permet pas.
@@ -600,11 +628,12 @@ d'exécutions la première version a gagnées contre la seconde.}
 Le tas max se range dans un simple tableau : le parent de la case $i$ est la case
 $(i-1)/2$. L'insertion fait \textbf{remonter} la nouvelle valeur, l'extraction fait
 \textbf{redescendre} le dernier élément placé à la racine, et chacune coûte au plus la
-hauteur de l'arbre, $\log_2 n$. Les insertions prennent environ 7~ms pour 200\,000 valeurs
-et 34 à 43~ms pour 1\,000\,000 ; une extraction du max reste sous la microseconde
-(16 à 19 échanges), presque sans changer quand $n$ est multiplié par 5. Des valeurs triées sont le pire cas des insertions
-en nombre d'échanges (12 à 14 fois plus), avec un écart de temps bien plus faible.
+hauteur de l'arbre, $\log_2 n$. Une insertion qui reste à la fin ne fait aucun échange ;
+une insertion qui remonte jusqu'à la racine en fait $\log_2 n$ (23 pour 10\,000\,000
+valeurs), en 0,1 à 0,2~$\mu$s. Insérer les $n$ valeurs prend environ 10~ms pour 200\,000 valeurs
+et 0,45 à 0,7~s pour 10\,000\,000 ; des valeurs triées sont le pire cas, avec 12 à 17 fois plus
+d'échanges, et l'écart de temps grandit avec $n$ (1,6 fois plus lent à 10\,000\,000).
 \texttt{std::priority\_queue} est la version STL de la même structure : à égalité sur les
-valeurs mélangées, et un peu plus lente que la nôtre sur le fichier trié.
+opérations uniques, et plus lente que la nôtre pour insérer les $n$ valeurs.
 
 \end{document}

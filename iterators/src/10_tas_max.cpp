@@ -10,7 +10,7 @@ using namespace std;
 using namespace std::chrono;
 
 // ==============================================================================
-// TAS MAX : INSERTIONS + EXTRACTION DU MAX SUR LES VALEURS DE data/data.txt
+// TAS MAX : INSERTIONS, EXTRACTION DU MAX, INSERTION A LA FIN / JUSQU'A LA RACINE
 // ==============================================================================
 
 // Tas max range dans un tableau : pour la case i, le parent est en (i-1)/2,
@@ -98,31 +98,60 @@ vector<int> lire_fichier(const string& nom) {
     return valeurs;
 }
 
-// Insere toutes les valeurs dans un tas, puis extrait UNE fois le max (la
-// racine) et reorganise le tas. Affiche une ligne : temps et echanges de
-// chaque phase, le max extrait et le nouveau max apres reorganisation.
-void mesurer(const string& titre, const vector<int>& valeurs) {
+// Une mesure : son temps (ms ou us) et le nombre d'echanges qu'elle a faits.
+struct Mesure {
+    double temps;
+    long echanges;
+};
+
+// Resultats des quatre mesures faites sur un tas.
+struct Resultats {
+    Mesure insertions;     // les n valeurs du fichier (ms)
+    Mesure extraction;     // un seul extraireMax() (us)
+    Mesure insertion_fin;  // une valeur plus petite que toutes : reste en bas (us)
+    Mesure insertion_haut; // une valeur plus grande que toutes : monte a la racine (us)
+    int extrait, nouveau_max;
+};
+
+// Insere toutes les valeurs, extrait UNE fois le max (racine retiree +
+// reorganisation), puis insere une valeur qui reste a la fin (aucun echange)
+// et une valeur qui doit remonter jusqu'a la racine (log n echanges).
+Resultats mesurer(const vector<int>& valeurs) {
     TasMax tas;
+    Resultats r;
+    int plus_petit = *min_element(valeurs.begin(), valeurs.end());
+    int plus_grand = *max_element(valeurs.begin(), valeurs.end());
 
     auto t1 = high_resolution_clock::now();
     for (int v : valeurs) tas.inserer(v);
     auto t2 = high_resolution_clock::now();
-    double t_insertions = get_ms(t1, t2);
-    long e_insertions = tas.prendreEchanges();
+    r.insertions = {get_ms(t1, t2), tas.prendreEchanges()};
 
     t1 = high_resolution_clock::now();
-    int extrait = tas.extraireMax();
+    r.extrait = tas.extraireMax();
     t2 = high_resolution_clock::now();
-    double t_extraction = get_us(t1, t2);
-    long e_extraction = tas.prendreEchanges();
+    r.extraction = {get_us(t1, t2), tas.prendreEchanges()};
+    r.nouveau_max = tas.max();
 
-    cout << "| " << left << setw(16) << titre
-         << "| " << right << setw(8) << fixed << setprecision(3) << t_insertions << " ms "
-         << "| " << right << setw(8) << t_extraction << " us "
-         << "| " << right << setw(9) << e_insertions << " "
-         << "| " << right << setw(9) << e_extraction << " "
-         << "| " << right << setw(7) << extrait << " "
-         << "| " << right << setw(7) << tas.max() << " |\n";
+    t1 = high_resolution_clock::now();
+    tas.inserer(plus_petit - 1);
+    t2 = high_resolution_clock::now();
+    r.insertion_fin = {get_us(t1, t2), tas.prendreEchanges()};
+
+    t1 = high_resolution_clock::now();
+    tas.inserer(plus_grand + 1);
+    t2 = high_resolution_clock::now();
+    r.insertion_haut = {get_us(t1, t2), tas.prendreEchanges()};
+    return r;
+}
+
+// Affiche une ligne du tableau : une mesure, pour le fichier trie et melange.
+void afficher(const string& ligne, Mesure trie, Mesure mel, const string& unite) {
+    cout << "| " << left << setw(31) << ligne << fixed << setprecision(3)
+         << "| " << right << setw(9) << trie.temps << " " << unite << " "
+         << "| " << right << setw(9) << trie.echanges << " "
+         << "| " << right << setw(9) << mel.temps << " " << unite << " "
+         << "| " << right << setw(9) << mel.echanges << " |\n";
 }
 
 // Lit le fichier, puis fait les mesures sur les valeurs dans l'ordre du
@@ -130,41 +159,46 @@ void mesurer(const string& titre, const vector<int>& valeurs) {
 bool tester(const string& fichier) {
     vector<int> valeurs = lire_fichier(fichier);
     if (valeurs.empty()) {
-        cerr << "Impossible de lire " << fichier << "\n";
+        cerr << "\nImpossible de lire " << fichier << " (fichier absent ? voir make data)\n";
         return false;
     }
 
     vector<int> melangees = valeurs;
     shuffle(melangees.begin(), melangees.end(), mt19937(42));
 
-    string ligne(97, '=');
+    Resultats trie = mesurer(valeurs);
+    Resultats mel = mesurer(melangees);
+
+    string ligne(87, '=');
     cout << "\n" << ligne << "\n";
     cout << "   TAS MAX -- " << valeurs.size() << " valeurs lues depuis " << fichier << "\n";
     cout << ligne << "\n";
-    cout << "|                 |            Temps            |       Echanges        |  Max   | Nouveau |\n";
-    cout << "| " << left << setw(16) << "Ordre"
-         << "| " << setw(12) << "Insertions"
-         << "| " << setw(12) << "Extr. max"
-         << "| " << setw(10) << "Insert."
-         << "| " << setw(10) << "Extract."
-         << "| " << setw(8) << "extrait"
-         << "| " << setw(8) << "max" << "|\n";
-    cout << "|-----------------|-------------|-------------|-----------|-----------|---------|---------|\n";
+    cout << "|                                |     Fichier (trie)        |       Melangees           |\n";
+    cout << "| " << left << setw(31) << "Mesure"
+         << "| " << setw(13) << "Temps" << "| " << setw(10) << "Echanges"
+         << "| " << setw(13) << "Temps" << "| " << setw(10) << "Echanges" << "|\n";
+    cout << "|--------------------------------|--------------|-----------|--------------|-----------|\n";
 
-    mesurer("Fichier (trie)", valeurs);
-    mesurer("Melangees", melangees);
+    afficher("Insertion des n valeurs", trie.insertions, mel.insertions, "ms");
+    afficher("Extraction du max", trie.extraction, mel.extraction, "us");
+    afficher("Insertion qui reste a la fin", trie.insertion_fin, mel.insertion_fin, "us");
+    afficher("Insertion jusqu'a la racine", trie.insertion_haut, mel.insertion_haut, "us");
 
     cout << ligne << "\n";
-    cout << "Insertions   : n insertions avec remontee, O(n log n).\n";
-    cout << "Extract. max : un seul extraireMax() (racine retiree + reorganisation), O(log n).\n";
+    cout << "Max extrait : " << trie.extrait << ", nouveau max apres reorganisation : "
+         << trie.nouveau_max << "\n";
+    cout << "Reste a la fin : valeur plus petite que toutes, son parent est plus grand (0 echange).\n";
+    cout << "Jusqu'a la racine : valeur plus grande que toutes, remonte de log2(n) niveaux.\n";
     return true;
 }
 
-// Sans argument : teste data/data.txt (200 000 valeurs) puis data/data_1M.txt
-// (1 000 000 valeurs). Avec un argument : teste seulement ce fichier.
+// Sans argument : teste data/data.txt (200 000 valeurs), data/data_1M.txt
+// (1 000 000) et data/data_10M.txt (10 000 000, cree par make data).
+// Avec un argument : teste seulement ce fichier.
 int main(int argc, char* argv[]) {
     if (argc > 1) return tester(argv[1]) ? 0 : 1;
     bool ok = tester("data/data.txt");
     ok = tester("data/data_1M.txt") && ok;
+    ok = tester("data/data_10M.txt") && ok;
     return ok ? 0 : 1;
 }

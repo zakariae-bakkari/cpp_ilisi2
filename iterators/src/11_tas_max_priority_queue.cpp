@@ -71,8 +71,10 @@ public:
 };
 
 struct Temps {
-    double insertions;  // ms
-    double extraction;  // us
+    double insertions;      // les n valeurs du fichier (ms)
+    double extraction;      // un seul retrait du max (us)
+    double insertion_fin;   // valeur plus petite que toutes : reste en bas (us)
+    double insertion_haut;  // valeur plus grande que toutes : monte a la racine (us)
 };
 
 // Duree entre deux instants, en millisecondes.
@@ -96,37 +98,63 @@ vector<int> lire_fichier(const string& nom) {
     return valeurs;
 }
 
-// Notre tas : inserer() de chaque valeur, puis un seul extraireMax().
-Temps mesurer_tas_max(const vector<int>& valeurs) {
+// Notre tas : inserer() de chaque valeur, un seul extraireMax(), puis une
+// insertion qui reste a la fin et une qui remonte jusqu'a la racine.
+Temps mesurer_tas_max(const vector<int>& valeurs, int plus_petit, int plus_grand) {
     TasMax tas;
+    Temps r;
 
     auto t1 = high_resolution_clock::now();
     for (int v : valeurs) tas.inserer(v);
     auto t2 = high_resolution_clock::now();
-    double t_ins = get_ms(t1, t2);
+    r.insertions = get_ms(t1, t2);
 
     t1 = high_resolution_clock::now();
     volatile int extrait = tas.extraireMax();  // volatile : le resultat est garde
     t2 = high_resolution_clock::now();
     (void)extrait;
-    return {t_ins, get_us(t1, t2)};
+    r.extraction = get_us(t1, t2);
+
+    t1 = high_resolution_clock::now();
+    tas.inserer(plus_petit - 1);
+    t2 = high_resolution_clock::now();
+    r.insertion_fin = get_us(t1, t2);
+
+    t1 = high_resolution_clock::now();
+    tas.inserer(plus_grand + 1);
+    t2 = high_resolution_clock::now();
+    r.insertion_haut = get_us(t1, t2);
+    return r;
 }
 
-// priority_queue : push() de chaque valeur, puis un seul top() + pop().
-Temps mesurer_priority_queue(const vector<int>& valeurs) {
+// priority_queue : push() de chaque valeur, un seul top() + pop(), puis un
+// push() qui reste a la fin et un push() qui remonte jusqu'a la racine.
+Temps mesurer_priority_queue(const vector<int>& valeurs, int plus_petit, int plus_grand) {
     priority_queue<int> pq;
+    Temps r;
 
     auto t1 = high_resolution_clock::now();
     for (int v : valeurs) pq.push(v);
     auto t2 = high_resolution_clock::now();
-    double t_ins = get_ms(t1, t2);
+    r.insertions = get_ms(t1, t2);
 
     t1 = high_resolution_clock::now();
     volatile int extrait = pq.top();
     pq.pop();
     t2 = high_resolution_clock::now();
     (void)extrait;
-    return {t_ins, get_us(t1, t2)};
+    r.extraction = get_us(t1, t2);
+
+    t1 = high_resolution_clock::now();
+    pq.push(plus_petit - 1);
+    t2 = high_resolution_clock::now();
+    r.insertion_fin = get_us(t1, t2);
+
+    t1 = high_resolution_clock::now();
+    pq.push(plus_grand + 1);
+    t2 = high_resolution_clock::now();
+    r.insertion_haut = get_us(t1, t2);
+    return r;
 }
 
 // Affiche une ligne du tableau : une mesure (ordre + phase) pour les deux
@@ -134,7 +162,7 @@ Temps mesurer_priority_queue(const vector<int>& valeurs) {
 void afficher(const string& ligne, double tas, double pq, const string& unite) {
     string gagnant = tas < pq ? "TasMax" : "priority_queue";
     double rapport = tas < pq ? pq / tas : tas / pq;
-    cout << "| " << left << setw(30) << ligne << fixed << setprecision(3)
+    cout << "| " << left << setw(39) << ligne << fixed << setprecision(3)
          << "| " << right << setw(9) << tas << " " << unite << " "
          << "| " << right << setw(11) << pq << " " << unite << " "
          << "| " << left << setw(14) << gagnant
@@ -146,44 +174,54 @@ void afficher(const string& ligne, double tas, double pq, const string& unite) {
 bool tester(const string& fichier) {
     vector<int> valeurs = lire_fichier(fichier);
     if (valeurs.empty()) {
-        cerr << "Impossible de lire " << fichier << "\n";
+        cerr << "\nImpossible de lire " << fichier << " (fichier absent ? voir make data)\n";
         return false;
     }
 
     vector<int> melangees = valeurs;
     shuffle(melangees.begin(), melangees.end(), mt19937(42));
 
-    Temps tas_trie = mesurer_tas_max(valeurs);
-    Temps pq_trie = mesurer_priority_queue(valeurs);
-    Temps tas_mel = mesurer_tas_max(melangees);
-    Temps pq_mel = mesurer_priority_queue(melangees);
+    int plus_petit = *min_element(valeurs.begin(), valeurs.end());
+    int plus_grand = *max_element(valeurs.begin(), valeurs.end());
+    Temps tas_trie = mesurer_tas_max(valeurs, plus_petit, plus_grand);
+    Temps pq_trie = mesurer_priority_queue(valeurs, plus_petit, plus_grand);
+    Temps tas_mel = mesurer_tas_max(melangees, plus_petit, plus_grand);
+    Temps pq_mel = mesurer_priority_queue(melangees, plus_petit, plus_grand);
 
-    cout << "\n=======================================================================================\n";
+    string ligne(96, '=');
+    cout << "\n" << ligne << "\n";
     cout << "   TasMax vs std::priority_queue -- " << valeurs.size() << " valeurs lues depuis " << fichier << "\n";
-    cout << "=======================================================================================\n";
-    cout << "| " << left << setw(30) << "Ordre + phase"
+    cout << ligne << "\n";
+    cout << "| " << left << setw(39) << "Ordre + mesure"
          << "| " << setw(13) << "TasMax"
          << "| " << setw(15) << "priority_queue"
          << "| " << setw(20) << "Plus rapide" << "|\n";
-    cout << "|-------------------------------|--------------|----------------|---------------------|\n";
+    cout << "|----------------------------------------|--------------|----------------|---------------------|\n";
 
-    afficher("Fichier (trie) insertions", tas_trie.insertions, pq_trie.insertions, "ms");
-    afficher("Fichier (trie) extraction max", tas_trie.extraction, pq_trie.extraction, "us");
-    afficher("Melangees insertions", tas_mel.insertions, pq_mel.insertions, "ms");
-    afficher("Melangees extraction max", tas_mel.extraction, pq_mel.extraction, "us");
+    afficher("Trie : insertion des n valeurs", tas_trie.insertions, pq_trie.insertions, "ms");
+    afficher("Trie : extraction du max", tas_trie.extraction, pq_trie.extraction, "us");
+    afficher("Trie : insertion qui reste a la fin", tas_trie.insertion_fin, pq_trie.insertion_fin, "us");
+    afficher("Trie : insertion jusqu'a la racine", tas_trie.insertion_haut, pq_trie.insertion_haut, "us");
+    afficher("Melange : insertion des n valeurs", tas_mel.insertions, pq_mel.insertions, "ms");
+    afficher("Melange : extraction du max", tas_mel.extraction, pq_mel.extraction, "us");
+    afficher("Melange : insertion qui reste a la fin", tas_mel.insertion_fin, pq_mel.insertion_fin, "us");
+    afficher("Melange : insertion jusqu'a la racine", tas_mel.insertion_haut, pq_mel.insertion_haut, "us");
 
-    cout << "=======================================================================================\n";
+    cout << ligne << "\n";
     cout << "Les deux sont un tas max dans un vector : insertion et extraction O(log n).\n";
-    cout << "Extraction max : un seul retrait de la racine + reorganisation (en microsecondes).\n";
+    cout << "Reste a la fin : valeur plus petite que toutes (0 echange) ;\n";
+    cout << "jusqu'a la racine : valeur plus grande que toutes (log2(n) echanges).\n";
     cout << "x2.00 = deux fois plus rapide que l'autre version.\n";
     return true;
 }
 
-// Sans argument : teste data/data.txt (200 000 valeurs) puis data/data_1M.txt
-// (1 000 000 valeurs). Avec un argument : teste seulement ce fichier.
+// Sans argument : teste data/data.txt (200 000 valeurs), data/data_1M.txt
+// (1 000 000) et data/data_10M.txt (10 000 000, cree par make data).
+// Avec un argument : teste seulement ce fichier.
 int main(int argc, char* argv[]) {
     if (argc > 1) return tester(argv[1]) ? 0 : 1;
     bool ok = tester("data/data.txt");
     ok = tester("data/data_1M.txt") && ok;
+    ok = tester("data/data_10M.txt") && ok;
     return ok ? 0 : 1;
 }
