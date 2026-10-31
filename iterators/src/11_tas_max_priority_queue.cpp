@@ -141,14 +141,13 @@ void afficher(const string& ligne, double tas, double pq, const string& unite) {
          << " x" << setprecision(2) << rapport << " |\n";
 }
 
-// Lit data/data.txt (ou le fichier passe en argument), puis mesure les deux
-// versions sur les valeurs dans l'ordre du fichier (triees) et melangees.
-int main(int argc, char* argv[]) {
-    string fichier = argc > 1 ? argv[1] : "data/data.txt";
+// Lit le fichier, puis fait les mesures sur les valeurs dans l'ordre du
+// fichier (triees) et sur les memes melangees. Renvoie false si illisible.
+bool tester(const string& fichier) {
     vector<int> valeurs = lire_fichier(fichier);
     if (valeurs.empty()) {
         cerr << "Impossible de lire " << fichier << "\n";
-        return 1;
+        return false;
     }
 
     vector<int> melangees = valeurs;
@@ -177,6 +176,14 @@ int main(int argc, char* argv[]) {
     cout << "Les deux sont un tas max dans un vector : insertion et extraction O(log n).\n";
     cout << "Extraction max : un seul retrait de la racine + reorganisation (en microsecondes).\n";
     cout << "x2.00 = deux fois plus rapide que l'autre version.\n";
+    return true;
+}
 
-    return 0;
+// Sans argument : teste data/data.txt (200 000 valeurs) puis data/data_1M.txt
+// (1 000 000 valeurs). Avec un argument : teste seulement ce fichier.
+int main(int argc, char* argv[]) {
+    if (argc > 1) return tester(argv[1]) ? 0 : 1;
+    bool ok = tester("data/data.txt");
+    ok = tester("data/data_1M.txt") && ok;
+    return ok ? 0 : 1;
 }

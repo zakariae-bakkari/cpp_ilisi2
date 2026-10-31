@@ -125,14 +125,13 @@ void mesurer(const string& titre, const vector<int>& valeurs) {
          << "| " << right << setw(7) << tas.max() << " |\n";
 }
 
-// Lit data/data.txt (ou le fichier passe en argument), puis mesure le tas
-// sur les valeurs dans l'ordre du fichier (triees) et sur les memes melangees.
-int main(int argc, char* argv[]) {
-    string fichier = argc > 1 ? argv[1] : "data/data.txt";
+// Lit le fichier, puis fait les mesures sur les valeurs dans l'ordre du
+// fichier (triees) et sur les memes melangees. Renvoie false si illisible.
+bool tester(const string& fichier) {
     vector<int> valeurs = lire_fichier(fichier);
     if (valeurs.empty()) {
         cerr << "Impossible de lire " << fichier << "\n";
-        return 1;
+        return false;
     }
 
     vector<int> melangees = valeurs;
@@ -158,6 +157,14 @@ int main(int argc, char* argv[]) {
     cout << ligne << "\n";
     cout << "Insertions   : n insertions avec remontee, O(n log n).\n";
     cout << "Extract. max : un seul extraireMax() (racine retiree + reorganisation), O(log n).\n";
+    return true;
+}
 
-    return 0;
+// Sans argument : teste data/data.txt (200 000 valeurs) puis data/data_1M.txt
+// (1 000 000 valeurs). Avec un argument : teste seulement ce fichier.
+int main(int argc, char* argv[]) {
+    if (argc > 1) return tester(argv[1]) ? 0 : 1;
+    bool ok = tester("data/data.txt");
+    ok = tester("data/data_1M.txt") && ok;
+    return ok ? 0 : 1;
 }
