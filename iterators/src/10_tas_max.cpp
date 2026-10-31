@@ -10,7 +10,7 @@ using namespace std;
 using namespace std::chrono;
 
 // ==============================================================================
-// TAS MAX : INSERTIONS + EXTRACTIONS SUR LES VALEURS DE data/data.txt
+// TAS MAX : INSERTIONS + EXTRACTION DU MAX SUR LES VALEURS DE data/data.txt
 // ==============================================================================
 
 // Tas max range dans un tableau : pour la case i, le parent est en (i-1)/2,
@@ -66,8 +66,8 @@ public:
         return racine;
     }
 
-    // Vrai quand le tas ne contient plus aucune valeur.
-    bool vide() const { return tas.empty(); }
+    // Renvoie le max (la racine) sans le retirer. O(1).
+    int max() const { return tas[0]; }
 
     // Renvoie le nombre d'echanges depuis le dernier appel, puis le remet a 0.
     long prendreEchanges() {
@@ -82,6 +82,11 @@ double get_ms(time_point<high_resolution_clock> start, time_point<high_resolutio
     return duration<double, milli>(end - start).count();
 }
 
+// Duree entre deux instants, en microsecondes.
+double get_us(time_point<high_resolution_clock> start, time_point<high_resolution_clock> end) {
+    return duration<double, micro>(end - start).count();
+}
+
 // Lit tous les entiers du fichier (essaie aussi ../ si lance depuis un
 // sous-dossier). Renvoie un vecteur vide si le fichier est introuvable.
 vector<int> lire_fichier(const string& nom) {
@@ -93,8 +98,9 @@ vector<int> lire_fichier(const string& nom) {
     return valeurs;
 }
 
-// Insere toutes les valeurs dans un tas, puis extrait le max jusqu'a vider
-// le tas. Affiche une ligne : temps et echanges de chaque phase.
+// Insere toutes les valeurs dans un tas, puis extrait UNE fois le max (la
+// racine) et reorganise le tas. Affiche une ligne : temps et echanges de
+// chaque phase, le max extrait et le nouveau max apres reorganisation.
 void mesurer(const string& titre, const vector<int>& valeurs) {
     TasMax tas;
 
@@ -105,16 +111,18 @@ void mesurer(const string& titre, const vector<int>& valeurs) {
     long e_insertions = tas.prendreEchanges();
 
     t1 = high_resolution_clock::now();
-    while (!tas.vide()) tas.extraireMax();
+    int extrait = tas.extraireMax();
     t2 = high_resolution_clock::now();
-    double t_extraction = get_ms(t1, t2);
+    double t_extraction = get_us(t1, t2);
     long e_extraction = tas.prendreEchanges();
 
-    cout << "| " << left << setw(20) << titre
-         << "| " << right << setw(10) << fixed << setprecision(3) << t_insertions << " ms "
-         << "| " << right << setw(10) << t_extraction << " ms "
+    cout << "| " << left << setw(16) << titre
+         << "| " << right << setw(8) << fixed << setprecision(3) << t_insertions << " ms "
+         << "| " << right << setw(8) << t_extraction << " us "
          << "| " << right << setw(9) << e_insertions << " "
-         << "| " << right << setw(9) << e_extraction << " |\n";
+         << "| " << right << setw(9) << e_extraction << " "
+         << "| " << right << setw(7) << extrait << " "
+         << "| " << right << setw(7) << tas.max() << " |\n";
 }
 
 // Lit data/data.txt (ou le fichier passe en argument), puis mesure le tas
@@ -130,23 +138,26 @@ int main(int argc, char* argv[]) {
     vector<int> melangees = valeurs;
     shuffle(melangees.begin(), melangees.end(), mt19937(42));
 
-    cout << "\n=============================================================================\n";
+    string ligne(97, '=');
+    cout << "\n" << ligne << "\n";
     cout << "   TAS MAX -- " << valeurs.size() << " valeurs lues depuis " << fichier << "\n";
-    cout << "=============================================================================\n";
-    cout << "|                     |         Temps                 |       Echanges        |\n";
-    cout << "| " << left << setw(20) << "Ordre des valeurs"
-         << "| " << setw(14) << "Insertions"
-         << "| " << setw(14) << "Extractions"
+    cout << ligne << "\n";
+    cout << "|                 |            Temps            |       Echanges        |  Max   | Nouveau |\n";
+    cout << "| " << left << setw(16) << "Ordre"
+         << "| " << setw(12) << "Insertions"
+         << "| " << setw(12) << "Extr. max"
          << "| " << setw(10) << "Insert."
-         << "| " << setw(10) << "Extract." << "|\n";
-    cout << "|---------------------|---------------|---------------|-----------|-----------|\n";
+         << "| " << setw(10) << "Extract."
+         << "| " << setw(8) << "extrait"
+         << "| " << setw(8) << "max" << "|\n";
+    cout << "|-----------------|-------------|-------------|-----------|-----------|---------|---------|\n";
 
     mesurer("Fichier (trie)", valeurs);
     mesurer("Melangees", melangees);
 
-    cout << "=============================================================================\n";
-    cout << "Insertions  : n insertions avec remontee, O(n log n).\n";
-    cout << "Extractions : extraireMax() jusqu'au tas vide (ajustement), O(n log n).\n";
+    cout << ligne << "\n";
+    cout << "Insertions   : n insertions avec remontee, O(n log n).\n";
+    cout << "Extract. max : un seul extraireMax() (racine retiree + reorganisation), O(log n).\n";
 
     return 0;
 }
