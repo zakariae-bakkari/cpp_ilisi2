@@ -66,13 +66,19 @@ run_10: $(BIN_DIR)/10_tas_max data
 run_11: $(BIN_DIR)/11_tas_max_priority_queue data
 	./$(BIN_DIR)/11_tas_max_priority_queue
 
+run_12: $(BIN_DIR)/12_tas_min data
+	./$(BIN_DIR)/12_tas_min
+
+run_13: $(BIN_DIR)/13_tas_min_priority_queue data
+	./$(BIN_DIR)/13_tas_min_priority_queue
+
 run_benchmarks: run_04 run_05 run_06 run_08
 
 help:
 	@echo "Cibles disponibles dans ce Makefile :"
 	@echo "  make run (ou make program) : Affiche la liste interactive pour choisir et executer un programme"
 	@echo "  make all                   : Compile tous les fichiers source dans $(BIN_DIR)/"
-	@echo "  make data                  : Cree data/data_10M.txt (10 000 000 valeurs, pour 10 et 11)"
+	@echo "  make data                  : Cree data/data_10M.txt (10 000 000 valeurs, pour 10 a 13)"
 	@echo "  make clean                 : Supprime les executables compiles"
-	@echo "  make run_01 ... run_11     : Execute directement un programme precis"
+	@echo "  make run_01 ... run_13     : Execute directement un programme precis"
 	@echo "  make run_benchmarks        : Execute les benchmarks 04, 05, 06 et 08"

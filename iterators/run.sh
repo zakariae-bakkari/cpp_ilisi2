@@ -30,10 +30,12 @@ while true; do
     echo -e " ${GREEN}10)${NC} ${BOLD}09_arbre_binaire_recherche${NC}         : Arbre binaire de recherche (insertion + recherche)"
     echo -e " ${GREEN}11)${NC} ${BOLD}10_tas_max${NC}                         : Tas max (insertions + extraction du max sur fichier)"
     echo -e " ${GREEN}12)${NC} ${BOLD}11_tas_max_priority_queue${NC}          : Tas max : notre TasMax vs std::priority_queue"
+    echo -e " ${GREEN}13)${NC} ${BOLD}12_tas_min${NC}                         : Tas min (insertions + extraction du min sur fichier)"
+    echo -e " ${GREEN}14)${NC} ${BOLD}13_tas_min_priority_queue${NC}          : Tas min : notre TasMin vs std::priority_queue"
     echo -e " ${YELLOW}9)${NC} ${BOLD}Exécuter tous les benchmarks${NC}    : Lance les benchmarks 04, 05, 06 et 08 à la suite"
     echo -e " ${RED}q)${NC} ${BOLD}Quitter${NC}"
     echo -e "${CYAN}----------------------------------------------------------------------${NC}"
-    read -rp " Entrez votre choix [1-12 ou q] : " choice
+    read -rp " Entrez votre choix [1-14 ou q] : " choice
 
     case "$choice" in
         1)
@@ -90,6 +92,14 @@ while true; do
         12)
             echo -e "\n${YELLOW}>>> Exécution de 11_tas_max_priority_queue :${NC}\n"
             ./executables/11_tas_max_priority_queue
+            ;;
+        13)
+            echo -e "\n${YELLOW}>>> Exécution de 12_tas_min :${NC}\n"
+            ./executables/12_tas_min
+            ;;
+        14)
+            echo -e "\n${YELLOW}>>> Exécution de 13_tas_min_priority_queue :${NC}\n"
+            ./executables/13_tas_min_priority_queue
             ;;
         q|Q)
             echo -e "\n${GREEN}Au revoir !${NC}\n"
