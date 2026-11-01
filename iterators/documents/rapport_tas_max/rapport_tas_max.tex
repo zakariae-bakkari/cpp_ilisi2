@@ -545,10 +545,57 @@ qui gagne au moins 11 exécutions sur 15 ; sans gras : égalité.}
         racine en fait $\log_2 n$ (17 à 23), et une extraction 16 à 22. Multiplier $n$ par 50
         n'ajoute que 6 échanges : c'est le $O(\log n)$. Ces mesures sont si courtes qu'elles
         varient d'une exécution à l'autre, et aucune version ne gagne nettement.
-  \item \textbf{\texttt{priority\_queue} n'est donc pas meilleure partout} : elle ne gagne
-        nettement aucune mesure. Elle reste le bon choix en pratique (déjà écrite, testée,
-        générique) ; écrire notre tas permet de comprendre ce qu'elle fait et de compter les
-        échanges.
+  \item \textbf{Avec \texttt{-O3}, \texttt{priority\_queue} n'est donc pas meilleure
+        partout} : elle ne gagne nettement aucune mesure. Mais ce classement dépend de
+        l'optimiseur du compilateur (ci-dessous).
+\end{itemize}
+
+\subsection*{L'optimiseur du compilateur change le classement}
+
+Tous les résultats ci-dessus sont compilés avec \texttt{-O3} (le \texttt{Makefile}) : le
+compilateur \textbf{optimise} le code avant de l'exécuter. Compilé sans option
+(\texttt{g++ fichier.cpp}, soit \texttt{-O0}), le même programme 11 donne un classement
+\textbf{inverse} :
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{l rr rr}
+\toprule
+& \multicolumn{2}{c}{\textbf{Sans optimisation} (\texttt{-O0})} & \multicolumn{2}{c}{\textbf{Optimisé} (\texttt{-O3})} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+\textbf{Mesure} (1\,000\,000 valeurs) & \texttt{TasMax} & \texttt{PQ} & \texttt{TasMax} & \texttt{PQ} \\
+\midrule
+Insérer les $n$ valeurs, trié (ms)        & 802          & \textbf{419}  & \textbf{41,8} & 68,7 \\
+Insérer les $n$ valeurs, mélangé (ms)     & 137          & 123           & \textbf{34,1} & 38,1 \\
+Extraire le max, trié ($\mu$s)            & 2,46         & \textbf{2,03} & \textbf{0,32} & 0,38 \\
+Insérer : jusqu'à la racine, trié ($\mu$s)& 0,87         & \textbf{0,60} & 0,19          & 0,21 \\
+Insérer : reste à la fin, trié ($\mu$s)   & \textbf{0,13}& 0,38          & 0,09          & \textbf{0,07} \\
+\bottomrule
+\end{tabular}
+\caption{Programme 11 compilé deux fois, médianes sur 7 exécutions. En gras : la version qui
+gagne au moins 6 exécutions sur 7.}
+\end{table}
+
+\begin{itemize}
+  \item \textbf{Sans optimisation, \texttt{priority\_queue} gagne} : elle insère les valeurs
+        triées \textbf{1,9 fois plus vite}, et gagne aussi l'extraction et l'insertion
+        jusqu'à la racine. Notre code exécute alors chaque ligne telle quelle : un
+        \texttt{swap} complet (3 copies) et plusieurs accès \texttt{tas[...]} à chaque niveau.
+        \texttt{priority\_queue} déplace un \og trou \fg{} et ne copie qu'une valeur par
+        niveau : elle fait moins de travail.
+  \item \textbf{Avec \texttt{-O3}, l'optimiseur réécrit notre code} : il supprime les appels de
+        fonction, garde les valeurs dans les registres du processeur, et notre \texttt{swap}
+        devient aussi léger que le \og trou \fg{}. L'avantage de \texttt{priority\_queue}
+        disparaît, et notre boucle, simple et écrite pour des \texttt{int}, finit même par
+        être plus rapide sur le fichier trié (cause exacte non identifiée).
+  \item L'optimisation rend tout \textbf{10 à 20 fois plus rapide} (802 $\to$ 42~ms pour notre
+        tas). Comparer deux versions n'a donc de sens qu'avec les \textbf{mêmes options de
+        compilation} : c'est ce qui explique que d'autres mesures, faites sans
+        \texttt{-O3}, trouvent \texttt{priority\_queue} meilleure partout.
+  \item En pratique, \texttt{priority\_queue} reste le bon choix : déjà écrite, testée, et
+        rapide quelles que soient les options. Écrire notre tas permet de comprendre ce
+        qu'elle fait et de compter les échanges.
 \end{itemize}
 
 % ==============================================================================
@@ -563,7 +610,9 @@ une insertion qui remonte jusqu'à la racine en fait $\log_2 n$ (23 pour 10\,000
 valeurs), en 0,1 à 0,2~$\mu$s. Insérer les $n$ valeurs prend environ 10~ms pour 200\,000 valeurs
 et 0,45 à 0,7~s pour 10\,000\,000 ; des valeurs triées sont le pire cas, avec 12 à 17 fois plus
 d'échanges, et l'écart de temps grandit avec $n$ (1,6 fois plus lent à 10\,000\,000).
-\texttt{std::priority\_queue} est la version STL de la même structure : à égalité sur les
-opérations uniques, et plus lente que la nôtre pour insérer les $n$ valeurs.
+\texttt{std::priority\_queue} est la version STL de la même structure. Le gagnant dépend de
+l'optimiseur du compilateur : sans optimisation, \texttt{priority\_queue} est la plus rapide
+(1,9 fois sur l'insertion des valeurs triées) ; avec \texttt{-O3}, notre tas la rattrape et la
+dépasse pour insérer les $n$ valeurs.
 
 \end{document}
