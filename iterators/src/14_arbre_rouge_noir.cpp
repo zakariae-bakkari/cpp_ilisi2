@@ -12,7 +12,7 @@ using namespace std;
 using namespace std::chrono;
 
 // ==============================================================================
-// ARBRE ROUGE-NOIR : INSERTION, RECHERCHE, HAUTEUR ET TEMPS
+// ARBRE ROUGE-NOIR (SANS CLASSE) : INSERTION, RECHERCHE, HAUTEUR ET TEMPS
 // ==============================================================================
 //
 // Regles : la racine est noire, un rouge n'a pas d'enfant rouge, et tous les
@@ -31,140 +31,138 @@ const string RESET      = "\033[0m";
 
 struct Noeud {
     int cle;
-    bool rouge = true;          // un nouveau noeud est toujours rouge
-    Noeud* gauche = nullptr;    // nullptr = feuille nil (noire)
-    Noeud* droite = nullptr;
-    Noeud* parent = nullptr;
+    bool rouge;       // true = rouge, false = noir
+    Noeud* gauche;    // nullptr = feuille nil (noire)
+    Noeud* droite;
+    Noeud* parent;
 };
 
-class ArbreRN {
-public:
-    Noeud* racine = nullptr;
+// ------------------------------------------------------------------------------
+// Fonctions de base
+// ------------------------------------------------------------------------------
 
-    ~ArbreRN() { liberer(racine); }
+bool estRouge(Noeud* n) { return n != nullptr && n->rouge; }  // nil = noir
 
-    void inserer(int cle) {
-        // 1) Descente comme dans un ABR
-        Noeud* parent = nullptr;
-        Noeud* courant = racine;
-        while (courant != nullptr) {
-            parent = courant;
-            if (cle < courant->cle) courant = courant->gauche;
-            else if (cle > courant->cle) courant = courant->droite;
-            else return;  // deja present
-        }
+// x descend a gauche, son fils droit y prend sa place
+void rotationGauche(Noeud*& racine, Noeud* x) {
+    Noeud* y = x->droite;
+    x->droite = y->gauche;
+    if (y->gauche) y->gauche->parent = x;
+    y->parent = x->parent;
+    if (x->parent == nullptr) racine = y;
+    else if (x == x->parent->gauche) x->parent->gauche = y;
+    else x->parent->droite = y;
+    y->gauche = x;
+    x->parent = y;
+}
 
-        // 2) Accrocher le nouveau noeud (rouge)
-        Noeud* n = new Noeud{cle};
-        n->parent = parent;
-        if (parent == nullptr) racine = n;
-        else if (cle < parent->cle) parent->gauche = n;
-        else parent->droite = n;
+// x descend a droite, son fils gauche y prend sa place
+void rotationDroite(Noeud*& racine, Noeud* x) {
+    Noeud* y = x->gauche;
+    x->gauche = y->droite;
+    if (y->droite) y->droite->parent = x;
+    y->parent = x->parent;
+    if (x->parent == nullptr) racine = y;
+    else if (x == x->parent->droite) x->parent->droite = y;
+    else x->parent->gauche = y;
+    y->droite = x;
+    x->parent = y;
+}
 
-        // 3) Reparer
-        reparer(n);
-    }
+void reparer(Noeud*& racine, Noeud* n) {
+    while (estRouge(n->parent)) {
+        Noeud* p = n->parent;
+        Noeud* g = p->parent;   // existe car un parent rouge n'est pas la racine
 
-    bool rechercher(int cle) const {
-        Noeud* courant = racine;
-        while (courant != nullptr) {
-            if (cle == courant->cle) return true;
-            courant = (cle < courant->cle) ? courant->gauche : courant->droite;
-        }
-        return false;
-    }
-
-    int hauteur() const { return hauteur(racine); }
-
-private:
-    static bool estRouge(Noeud* n) { return n != nullptr && n->rouge; }  // nil = noir
-
-    void reparer(Noeud* n) {
-        while (estRouge(n->parent)) {
-            Noeud* p = n->parent;
-            Noeud* g = p->parent;   // existe car un parent rouge n'est pas la racine
-
-            if (p == g->gauche) {
-                Noeud* oncle = g->droite;
-                if (estRouge(oncle)) {            // oncle rouge : recoloration
-                    p->rouge = false;
-                    oncle->rouge = false;
-                    g->rouge = true;
-                    n = g;                        // on remonte
-                } else {
-                    if (n == p->droite) {         // zig-zag : on le met en ligne
-                        rotationGauche(p);
-                        n = p;
-                        p = n->parent;
-                    }
-                    rotationDroite(g);            // ligne : rotation au grand-pere
-                    p->rouge = false;
-                    g->rouge = true;
+        if (p == g->gauche) {
+            Noeud* oncle = g->droite;
+            if (estRouge(oncle)) {            // oncle rouge : recoloration
+                p->rouge = false;
+                oncle->rouge = false;
+                g->rouge = true;
+                n = g;                        // on remonte
+            } else {
+                if (n == p->droite) {         // zig-zag : on le met en ligne
+                    rotationGauche(racine, p);
+                    n = p;
+                    p = n->parent;
                 }
-            } else {                              // meme chose en miroir
-                Noeud* oncle = g->gauche;
-                if (estRouge(oncle)) {
-                    p->rouge = false;
-                    oncle->rouge = false;
-                    g->rouge = true;
-                    n = g;
-                } else {
-                    if (n == p->gauche) {
-                        rotationDroite(p);
-                        n = p;
-                        p = n->parent;
-                    }
-                    rotationGauche(g);
-                    p->rouge = false;
-                    g->rouge = true;
+                rotationDroite(racine, g);    // ligne : rotation au grand-pere
+                p->rouge = false;
+                g->rouge = true;
+            }
+        } else {                              // meme chose en miroir
+            Noeud* oncle = g->gauche;
+            if (estRouge(oncle)) {
+                p->rouge = false;
+                oncle->rouge = false;
+                g->rouge = true;
+                n = g;
+            } else {
+                if (n == p->gauche) {
+                    rotationDroite(racine, p);
+                    n = p;
+                    p = n->parent;
                 }
+                rotationGauche(racine, g);
+                p->rouge = false;
+                g->rouge = true;
             }
         }
-        racine->rouge = false;  // la racine est toujours noire
+    }
+    racine->rouge = false;  // la racine est toujours noire
+}
+
+void inserer(Noeud*& racine, int cle) {
+    // 1) Descente comme dans un ABR
+    Noeud* parent = nullptr;
+    Noeud* courant = racine;
+    while (courant != nullptr) {
+        parent = courant;
+        if (cle < courant->cle) courant = courant->gauche;
+        else if (cle > courant->cle) courant = courant->droite;
+        else return;  // deja present
     }
 
-    // x descend a gauche, son fils droit y prend sa place
-    void rotationGauche(Noeud* x) {
-        Noeud* y = x->droite;
-        x->droite = y->gauche;
-        if (y->gauche) y->gauche->parent = x;
-        y->parent = x->parent;
-        if (x->parent == nullptr) racine = y;
-        else if (x == x->parent->gauche) x->parent->gauche = y;
-        else x->parent->droite = y;
-        y->gauche = x;
-        x->parent = y;
-    }
+    // 2) Accrocher le nouveau noeud, toujours rouge
+    Noeud* n = new Noeud{cle, true, nullptr, nullptr, parent};
+    if (parent == nullptr) racine = n;
+    else if (cle < parent->cle) parent->gauche = n;
+    else parent->droite = n;
 
-    // x descend a droite, son fils gauche y prend sa place
-    void rotationDroite(Noeud* x) {
-        Noeud* y = x->gauche;
-        x->gauche = y->droite;
-        if (y->droite) y->droite->parent = x;
-        y->parent = x->parent;
-        if (x->parent == nullptr) racine = y;
-        else if (x == x->parent->droite) x->parent->droite = y;
-        else x->parent->gauche = y;
-        y->droite = x;
-        x->parent = y;
-    }
+    // 3) Reparer
+    reparer(racine, n);
+}
 
-    int hauteur(Noeud* n) const {
-        if (n == nullptr) return 0;
-        return 1 + max(hauteur(n->gauche), hauteur(n->droite));
+bool rechercher(Noeud* racine, int cle) {
+    Noeud* courant = racine;
+    while (courant != nullptr) {
+        if (cle == courant->cle) return true;
+        courant = (cle < courant->cle) ? courant->gauche : courant->droite;
     }
+    return false;
+}
 
-    void liberer(Noeud* n) {
-        if (n == nullptr) return;
-        liberer(n->gauche);
-        liberer(n->droite);
-        delete n;
-    }
-};
+int hauteur(Noeud* n) {
+    if (n == nullptr) return 0;
+    return 1 + max(hauteur(n->gauche), hauteur(n->droite));
+}
 
-// ==============================================================================
+int taille(Noeud* n) {
+    if (n == nullptr) return 0;
+    return 1 + taille(n->gauche) + taille(n->droite);
+}
+
+void liberer(Noeud* n) {
+    if (n == nullptr) return;
+    liberer(n->gauche);
+    liberer(n->droite);
+    delete n;
+}
+
+// ------------------------------------------------------------------------------
 // Affichage
-// ==============================================================================
+// ------------------------------------------------------------------------------
 
 // Une case de tableau coloree, de largeur fixe
 void caseCouleur(int cle, bool rouge, int largeur = 5) {
@@ -176,22 +174,79 @@ string texte(Noeud* n) { return n ? to_string(n->cle) : "nil"; }
 // Tableau de depart : les valeurs dans l'ordre d'insertion.
 // Chaque noeud est ROUGE au moment ou on l'insere.
 void afficherDepart(const vector<int>& valeurs) {
-    cout << "\nTABLEAU DE DEPART (ordre d'insertion, chaque nouveau noeud est rouge)\n";
-    cout << "|";
+    cout << "\nTABLEAU DE DEPART (ordre d'insertion, chaque nouveau noeud est rouge)\n|";
     for (int v : valeurs) caseCouleur(v, true);
     cout << "\n";
 }
 
+// ---- Dessin de l'arbre en couleur ----
+// Chaque noeud occupe une case de LARGEUR colonnes. La colonne d'un noeud est
+// donnee par son rang dans l'ordre croissant, donc les gauches sont a gauche.
+// Ligne 2*profondeur : les noeuds ; ligne juste en dessous : les / et \.
+const int LARGEUR = 4;
+
+// grille : les caracteres ; couleur : 0 = rien, 1 = rouge, 2 = noir
+int placer(Noeud* n, int prof, int& rang, vector<string>& grille,
+           vector<vector<int>>& couleur) {
+    if (n == nullptr) return -1;
+    int colG = placer(n->gauche, prof + 1, rang, grille, couleur);
+    int col = rang * LARGEUR;
+    rang++;
+    int colD = placer(n->droite, prof + 1, rang, grille, couleur);
+
+    int ligne = 2 * prof;
+    string s = to_string(n->cle);
+    int debut = col + (LARGEUR - (int)s.size()) / 2;
+    for (int k = 0; k < LARGEUR; k++) couleur[ligne][col + k] = n->rouge ? 1 : 2;
+    for (int k = 0; k < (int)s.size(); k++) grille[ligne][debut + k] = s[k];
+
+    if (colG >= 0) {  // branche gauche : ___ puis /
+        int x = colG + LARGEUR / 2;
+        grille[ligne + 1][x] = '/';
+        for (int c = x + 1; c < col; c++) grille[ligne][c] = '_';
+    }
+    if (colD >= 0) {  // branche droite : ___ puis '\'
+        int x = colD + LARGEUR / 2 - 1;
+        grille[ligne + 1][x] = '\\';
+        for (int c = col + LARGEUR; c < x; c++) grille[ligne][c] = '_';
+    }
+    return col;
+}
+
+void dessinerArbre(Noeud* racine) {
+    cout << "\nARBRE FINAL (rouge = noeud rouge, gris = noeud noir)\n\n";
+    int lignes = 2 * hauteur(racine) - 1;  // pas de branches sous le dernier niveau
+    int colonnes = taille(racine) * LARGEUR;
+    vector<string> grille(lignes, string(colonnes, ' '));
+    vector<vector<int>> couleur(lignes, vector<int>(colonnes, 0));
+    int rang = 0;
+    placer(racine, 0, rang, grille, couleur);
+
+    for (int l = 0; l < lignes; l++) {
+        int actuelle = 0;
+        cout << "    ";
+        for (int c = 0; c < colonnes; c++) {
+            if (couleur[l][c] != actuelle) {
+                actuelle = couleur[l][c];
+                cout << (actuelle == 1 ? FOND_ROUGE : actuelle == 2 ? FOND_NOIR : RESET);
+            }
+            cout << grille[l][c];
+        }
+        cout << RESET << "\n";
+    }
+}
+
 // Tableau final : les noeuds niveau par niveau (parcours en largeur)
-void afficherFin(const ArbreRN& a) {
-    cout << "\nTABLEAU FINAL (arbre rouge-noir, niveau par niveau)\n";
+void afficherFin(Noeud* racine) {
+    cout << "\nTABLEAU FINAL (niveau par niveau)\n";
     cout << "+--------+-------+---------+--------+--------+--------+\n";
     cout << "| Niveau | Noeud | Couleur | Parent | Gauche | Droite |\n";
     cout << "+--------+-------+---------+--------+--------+--------+\n";
     queue<pair<Noeud*, int>> file;
-    file.push({a.racine, 0});
+    file.push({racine, 0});
     while (!file.empty()) {
-        auto [n, niveau] = file.front();
+        Noeud* n = file.front().first;
+        int niveau = file.front().second;
         file.pop();
         cout << "| " << setw(6) << niveau << " |";
         caseCouleur(n->cle, n->rouge, 6);
@@ -203,24 +258,11 @@ void afficherFin(const ArbreRN& a) {
         if (n->droite) file.push({n->droite, niveau + 1});
     }
     cout << "+--------+-------+---------+--------+--------+--------+\n";
-
-    // La meme chose sur une ligne, dans l'ordre croissant
-    cout << "\nTABLEAU FINAL (ordre croissant, avec les couleurs)\n|";
-    vector<Noeud*> pile;
-    Noeud* c = a.racine;
-    while (c || !pile.empty()) {
-        while (c) { pile.push_back(c); c = c->gauche; }
-        c = pile.back();
-        pile.pop_back();
-        caseCouleur(c->cle, c->rouge);
-        c = c->droite;
-    }
-    cout << "\n";
 }
 
-// ==============================================================================
+// ------------------------------------------------------------------------------
 // Mesures
-// ==============================================================================
+// ------------------------------------------------------------------------------
 
 struct Resultat {
     string nom;
@@ -230,19 +272,20 @@ struct Resultat {
     size_t trouves;
 };
 
-Resultat mesurer(const string& nom, const vector<int>& valeurs, ArbreRN& a) {
+// Remplit l'arbre avec les valeurs, puis les recherche toutes
+Resultat mesurer(const string& nom, const vector<int>& valeurs, Noeud*& racine) {
     auto t0 = high_resolution_clock::now();
-    for (int v : valeurs) a.inserer(v);
+    for (int v : valeurs) inserer(racine, v);
     auto t1 = high_resolution_clock::now();
 
     size_t trouves = 0;
-    for (int v : valeurs) trouves += a.rechercher(v);
+    for (int v : valeurs) trouves += rechercher(racine, v);
     auto t2 = high_resolution_clock::now();
 
     return {nom, valeurs.size(),
             duration<double, milli>(t1 - t0).count(),
             duration<double, milli>(t2 - t1).count(),
-            a.hauteur(), trouves};
+            hauteur(racine), trouves};
 }
 
 // n valeurs distinctes de 1 a n, melangees
@@ -256,23 +299,25 @@ vector<int> valeursMelangees(int n) {
 int main() {
     vector<Resultat> resultats;
 
-    // Cas 1 : 10 valeurs, on affiche les tableaux
+    // Cas 1 : 10 valeurs, on affiche les tableaux et l'arbre
     vector<int> dix = {1, 45, 67, 89, 12, 34, 23, 78, 56, 90};
-    ArbreRN a10;
-    resultats.push_back(mesurer("10 valeurs", dix, a10));
+    Noeud* arbre10 = nullptr;
+    resultats.push_back(mesurer("10 valeurs", dix, arbre10));
     afficherDepart(dix);
-    afficherFin(a10);
+    dessinerArbre(arbre10);
+    afficherFin(arbre10);
 
     // Cas 2 et 3 : 1 000 et 100 000 valeurs melangees
-    ArbreRN a1000, a100000;
-    resultats.push_back(mesurer("1 000 valeurs", valeursMelangees(1000), a1000));
-    resultats.push_back(mesurer("100 000 valeurs", valeursMelangees(100000), a100000));
+    Noeud* arbre1000 = nullptr;
+    Noeud* arbre100000 = nullptr;
+    resultats.push_back(mesurer("1 000 valeurs", valeursMelangees(1000), arbre1000));
+    resultats.push_back(mesurer("100 000 valeurs", valeursMelangees(100000), arbre100000));
 
     // Tableau des temps
     cout << "\nTEMPS ET HAUTEUR\n";
-    string ligne = "+-----------------+---------+----------------+----------------+---------+---------------+---------+";
+    string ligne = "+-----------------+---------+----------------+----------------+---------+-------------+---------+";
     cout << ligne << "\n";
-    cout << "| Cas             |       n | Insertion (ms) | Recherche (ms) | Hauteur | 2*log2(n+1)   | Trouves |\n";
+    cout << "| Cas             |       n | Insertion (ms) | Recherche (ms) | Hauteur | 2*log2(n+1) | Trouves |\n";
     cout << ligne << "\n";
     for (const Resultat& r : resultats) {
         cout << "| " << left << setw(15) << r.nom << " | " << right
@@ -280,10 +325,14 @@ int main() {
              << fixed << setprecision(4) << setw(14) << r.insertion_ms << " | "
              << setw(14) << r.recherche_ms << " | "
              << setw(7) << r.hauteur << " | "
-             << setprecision(1) << setw(13) << 2 * log2(r.n + 1.0) << " | "
+             << setprecision(1) << setw(11) << 2 * log2(r.n + 1.0) << " | "
              << setw(7) << r.trouves << " |\n";
     }
     cout << ligne << "\n";
     cout << "La hauteur reste toujours sous 2*log2(n+1) : l'arbre reste equilibre.\n";
+
+    liberer(arbre10);
+    liberer(arbre1000);
+    liberer(arbre100000);
     return 0;
 }
