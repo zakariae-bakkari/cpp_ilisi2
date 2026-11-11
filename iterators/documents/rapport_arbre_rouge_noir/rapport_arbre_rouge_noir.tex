@@ -1,0 +1,335 @@
+\documentclass[11pt,a4paper]{article}
+
+% ------------------------------------------------------------------------------
+% Packages
+% ------------------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{babel}
+\usepackage{hyperref}
+
+\hypersetup{colorlinks=true, linkcolor=bleu, urlcolor=bleu}
+
+% ------------------------------------------------------------------------------
+% Couleurs
+% ------------------------------------------------------------------------------
+\definecolor{bleu}{HTML}{1E3A8A}
+\definecolor{rougenoeud}{HTML}{DC2626}
+\definecolor{noirnoeud}{HTML}{1F2937}
+\definecolor{vert}{HTML}{16A34A}
+\definecolor{gris}{HTML}{64748B}
+\definecolor{codefond}{HTML}{F8FAFC}
+\definecolor{codecadre}{HTML}{CBD5E1}
+
+% ------------------------------------------------------------------------------
+% Style du code C++
+% ------------------------------------------------------------------------------
+\lstset{
+  language=C++,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{bleu}\bfseries,
+  commentstyle=\color{gris}\itshape,
+  stringstyle=\color{vert},
+  backgroundcolor=\color{codefond},
+  frame=single,
+  rulecolor=\color{codecadre},
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  numbers=left,
+  numberstyle=\tiny\color{gris},
+  captionpos=b,
+}
+\renewcommand{\lstlistingname}{Code}
+
+% ------------------------------------------------------------------------------
+% Noeuds de l'arbre
+% ------------------------------------------------------------------------------
+\tikzset{
+  rn/.style={circle, minimum size=8mm, inner sep=0pt, font=\small\bfseries, text=white},
+  rouge/.style={rn, fill=rougenoeud},
+  noir/.style={rn, fill=noirnoeud},
+  edge from parent/.style={draw=black!45, thick},
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\renewcommand{\arraystretch}{1.2}
+\newcommand{\entete}[1]{\textbf{\begin{tabular}[c]{@{}c@{}}#1\end{tabular}}}
+
+\title{\textbf{Arbre rouge-noir}\\[4pt]
+       \large Insertion, recherche et suppression, comparaison avec \texttt{std::map}
+       et \texttt{std::unordered\_map}}
+\author{Zakariae Bakkari\\
+        \small Programmation Objet Avancée et Design Patterns\\
+        \small\url{https://github.com/zakariae-bakkari/cpp_ilisi2}}
+\date{11 novembre 2026}
+
+\begin{document}
+
+\maketitle
+
+% ==============================================================================
+\section{Objectif}
+% ==============================================================================
+
+Écrire un \textbf{arbre rouge-noir} en C++, sans classe (une \texttt{struct Noeud} et des
+fonctions), y insérer des valeurs, puis mesurer le temps d'insertion, de recherche et la
+hauteur de l'arbre. Ensuite, le comparer à \texttt{std::map} (l'arbre rouge-noir de la STL)
+et à \texttt{std::unordered\_map} (une table de hachage).
+
+\textbf{Code source :}
+\begin{itemize}\footnotesize
+  \item arbre rouge-noir, dessin coloré et temps (option \textbf{15} du menu
+        \texttt{./run.sh}, ou \texttt{make run\_14}) :\\
+        \url{https://github.com/zakariae-bakkari/cpp_ilisi2/blob/main/iterators/src/14_arbre_rouge_noir.cpp}
+  \item comparaison avec \texttt{std::map} et \texttt{std::unordered\_map} (option
+        \textbf{16}, ou \texttt{make run\_15}) :\\
+        \url{https://github.com/zakariae-bakkari/cpp_ilisi2/blob/main/iterators/src/15_arbre_rouge_noir_vs_map.cpp}
+\end{itemize}
+
+% ==============================================================================
+\section{Les règles}
+% ==============================================================================
+
+Un arbre rouge-noir est un arbre binaire de recherche dont chaque nœud porte une couleur.
+Les feuilles vides (\texttt{nil}, ici \texttt{nullptr}) comptent comme noires.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|l|}
+\hline
+\textbf{Règle} & \textbf{Énoncé} \\
+\hline
+1 & Chaque nœud est rouge ou noir. \\
+\hline
+2 & La racine est noire. \\
+\hline
+3 & Les feuilles \texttt{nil} sont noires. \\
+\hline
+4 & Un nœud rouge n'a pas d'enfant rouge. \\
+\hline
+5 & Tous les chemins d'un nœud vers les \texttt{nil} ont le même nombre de nœuds noirs. \\
+\hline
+\end{tabular}
+\caption{Les 5 règles d'un arbre rouge-noir.}
+\end{table}
+
+\textbf{Pourquoi l'arbre reste équilibré.} Avec $h_n$ noirs sur chaque chemin (règle 5), le
+plus court chemin n'a que des noirs ($h_n$ nœuds), et le plus long alterne noir et rouge
+(au plus $2h_n$ nœuds, règle 4). Le plus long chemin fait donc au plus deux fois le plus
+court, et la hauteur reste sous $2\log_2(n+1)$.
+
+% ==============================================================================
+\section{Insertion}
+% ==============================================================================
+
+On insère d'abord comme dans un arbre binaire de recherche. Le nouveau nœud N est
+\textbf{rouge} : il n'ajoute pas de noir, donc la règle 5 reste vraie. Seule la règle 4
+peut casser (si le parent P est rouge). On regarde alors l'oncle U, le frère de P :
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|p{4.6cm}|p{8.6cm}|}
+\hline
+\textbf{Cas} & \textbf{Situation} & \textbf{Action} \\
+\hline
+A & oncle rouge & recoloration : P et U noirs, grand-père G rouge, puis on recommence en G \\
+\hline
+B & oncle noir, forme en ligne & rotation en G, puis échange des couleurs de P et G \\
+\hline
+C & oncle noir, forme en zig-zag & rotation en P pour obtenir une ligne, puis cas B \\
+\hline
+\end{tabular}
+\caption{Les trois cas de réparation (et leurs miroirs quand P est à droite de G).}
+\end{table}
+
+À la fin, la racine est remise en noir (règle 2).
+
+\begin{lstlisting}[caption={Réparation après insertion (\texttt{14\_arbre\_rouge\_noir.cpp}).}]
+void reparer(Noeud*& racine, Noeud* n) {
+    while (estRouge(n->parent)) {
+        Noeud* p = n->parent;
+        Noeud* g = p->parent;              // existe : un parent rouge n'est pas la racine
+        bool pGauche = (p == g->gauche);   // false = cas miroir
+        Noeud* oncle = pGauche ? g->droite : g->gauche;
+
+        if (estRouge(oncle)) {             // oncle rouge : recoloration
+            p->rouge = oncle->rouge = false;
+            g->rouge = true;
+            n = g;                         // on remonte
+            continue;
+        }
+        if (n == (pGauche ? p->droite : p->gauche)) {  // zig-zag -> ligne
+            pGauche ? rotationGauche(racine, p) : rotationDroite(racine, p);
+            n = p;
+            p = n->parent;
+        }
+        pGauche ? rotationDroite(racine, g) : rotationGauche(racine, g);  // ligne
+        p->rouge = false;
+        g->rouge = true;
+    }
+    racine->rouge = false;                 // la racine est toujours noire
+}
+\end{lstlisting}
+
+% ==============================================================================
+\section{Exemple : 10 valeurs}
+% ==============================================================================
+
+On insère, dans cet ordre : 1, 45, 67, 89, 12, 34, 23, 78, 56, 90. L'arbre obtenu :
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  level distance=13mm,
+  level 1/.style={sibling distance=60mm},
+  level 2/.style={sibling distance=30mm},
+  level 3/.style={sibling distance=15mm}]
+\node[noir] {45}
+  child { node[rouge] {12}
+    child { node[noir] {1} }
+    child { node[noir] {34}
+      child { node[rouge] {23} }
+      child[missing] }
+  }
+  child { node[rouge] {78}
+    child { node[noir] {67}
+      child { node[rouge] {56} }
+      child[missing] }
+    child { node[noir] {89}
+      child[missing]
+      child { node[rouge] {90} } }
+  };
+\end{tikzpicture}
+\caption{Arbre final. Chaque chemin de la racine vers un \texttt{nil} contient 2 nœuds noirs,
+et aucun nœud rouge n'a d'enfant rouge.}
+\end{figure}
+
+% ==============================================================================
+\section{Résultats}
+% ==============================================================================
+
+Machine : Intel Core i5-1135G7, \texttt{g++} 15.2, option \texttt{-O3}. Temps : médianes sur
+7 exécutions. Pour 1\,000 et 100\,000 valeurs : les nombres de 1 à $n$ mélangés.
+
+\subsection{Notre arbre (programme 14)}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|r|r|r|r|r|}
+\hline
+$n$ & \textbf{Insertion} & \textbf{Recherche des $n$ valeurs} & \textbf{Hauteur} & $2\log_2(n+1)$ \\
+\hline
+10      & 1,8 $\mu$s & 0,4 $\mu$s & 4  & 6,9 \\
+\hline
+1\,000  & 0,17 ms    & 0,05 ms    & 12 & 19,9 \\
+\hline
+100\,000 & 34,2 ms   & 15,9 ms    & 20 & 33,2 \\
+\hline
+\end{tabular}
+\caption{La hauteur reste toujours sous la borne $2\log_2(n+1)$.}
+\end{table}
+
+\subsection{Comparaison avec la STL (programme 15)}
+
+100\,000 clés, trois types de données : \textbf{aléatoires}, \textbf{triées}, et
+\textbf{partiellement triées} (triées puis 10\,\% des valeurs échangées au hasard).
+On recherche les $n$ clés présentes, puis $n$ clés absentes, et on supprime toutes les clés.
+La suppression de notre arbre est vérifiée par 200\,000 opérations au hasard comparées à
+\texttt{std::set}.
+
+\begin{table}[H]
+\centering
+\small
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{|l|l|r|r|r|r|r|r|r|}
+\hline
+\textbf{Données} & \textbf{Structure} & \entete{Insertion} & \entete{Recherche\\clé présente}
+  & \entete{Recherche\\clé absente} & \entete{Parcours} & \entete{Suppres-\\sion} & \entete{Total} & \entete{Hau-\\teur} \\
+\hline
+\multirow{3}{*}{aléatoires} & notre arbre & 45,7 & 18,4 & 23,2 & 3,0 & 43,2 & 133,0 & 20 \\
+  & \texttt{map}           & 57,9 & 49,1 & 57,5 & 8,5 & 56,5 & 228,2 & -- \\
+  & \texttt{unordered\_map} & \textbf{15,6} & \textbf{1,1} & \textbf{2,4} & \textbf{1,5} & \textbf{9,1} & \textbf{29,6} & -- \\
+\hline
+\multirow{3}{*}{triées} & notre arbre & 36,5 & 6,4 & 6,9 & 0,9 & 15,7 & 65,9 & 31 \\
+  & \texttt{map}           & 32,0 & 17,8 & 17,7 & 1,7 & 13,9 & 83,1 & -- \\
+  & \texttt{unordered\_map} & \textbf{8,4} & \textbf{0,7} & \textbf{0,8} & \textbf{0,4} & \textbf{4,9} & \textbf{15,0} & -- \\
+\hline
+\multirow{3}{*}{partielles} & notre arbre & 32,2 & 11,8 & 13,4 & 1,5 & 22,3 & 81,0 & 29 \\
+  & \texttt{map}           & 35,9 & 22,7 & 23,3 & 2,9 & 28,6 & 112,6 & -- \\
+  & \texttt{unordered\_map} & \textbf{9,8} & \textbf{0,7} & \textbf{1,3} & \textbf{0,7} & \textbf{6,2} & \textbf{19,0} & -- \\
+\hline
+\end{tabular}
+\caption{Temps en millisecondes pour 100\,000 clés (en gras : le plus rapide).}
+\end{table}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{|l|l|r|r|r|r|r|r|}
+\hline
+\textbf{Données} & \textbf{Structure} & \entete{Comparaisons\\insertion} & \entete{Comparaisons\\recherche}
+  & \entete{Comparaisons\\suppression} & \entete{Rota-\\tions} & \entete{Recolo-\\rations} & \entete{Alloca-\\tions} \\
+\hline
+\multirow{3}{*}{aléatoires} & notre arbre & 3\,202\,671 & 6\,490\,972 & 2\,701\,532 & 100\,163 & 441\,887 & 100\,000 \\
+  & \texttt{map}           & 1\,751\,316 & 3\,595\,468 & 2\,428\,631 & -- & -- & 100\,000 \\
+  & \texttt{unordered\_map} & 31\,204 & 127\,067 & 100\,000 & -- & -- & 100\,014 \\
+\hline
+\multirow{3}{*}{triées} & notre arbre & 5\,644\,777 & 6\,538\,194 & 2\,756\,688 & 149\,954 & 799\,734 & 100\,000 \\
+  & \texttt{map}           & 2\,972\,387 & 3\,619\,066 & 2\,906\,687 & -- & -- & 100\,000 \\
+  & \texttt{unordered\_map} & 13 & 127\,067 & 100\,000 & -- & -- & 100\,014 \\
+\hline
+\multirow{3}{*}{partielles} & notre arbre & 5\,064\,849 & 6\,825\,470 & 2\,325\,378 & 164\,986 & 641\,413 & 100\,000 \\
+  & \texttt{map}           & 2\,682\,423 & 3\,762\,706 & 2\,435\,763 & -- & -- & 100\,000 \\
+  & \texttt{unordered\_map} & 8\,492 & 127\,067 & 100\,000 & -- & -- & 100\,014 \\
+\hline
+\end{tabular}
+\caption{Compteurs pour 100\,000 clés. Les rotations et recolorations de la STL se font dans
+la bibliothèque : on ne peut pas les compter (--).}
+\end{table}
+
+\textbf{Ce qu'on en retient.}
+\begin{enumerate}
+  \item \textbf{\texttt{unordered\_map} est le plus rapide partout} (4 à 5 fois plus que notre
+        arbre au total) : le hachage donne la case directement, en $O(1)$ en moyenne, presque
+        sans comparaison. Mais ses clés ne sont pas triées.
+  \item \textbf{Notre arbre bat \texttt{std::map} au total} (1,3 à 1,7 fois plus rapide),
+        alors que les deux sont des arbres rouge-noir. La différence vient surtout de la
+        recherche (1,7 à 2,8 fois plus rapide) : notre nœud ne stocke qu'une clé (pas une paire
+        clé/valeur), et notre recherche s'arrête dès qu'elle trouve la clé. Sur les données
+        triées, \texttt{map} reste un peu devant pour l'insertion et la suppression.
+  \item \textbf{Notre arbre fait pourtant environ 1,8 fois plus de comparaisons} que
+        \texttt{map} pour insérer et rechercher : il teste \texttt{==} puis \texttt{<} à
+        chaque nœud, \texttt{map} un seul \texttt{<}. Le temps dépend surtout des accès à la
+        mémoire, pas du nombre de comparaisons.
+  \item \textbf{Les données triées sont plus rapides à parcourir} (les nœuds voisins sont
+        utilisés l'un après l'autre), mais elles coûtent plus de rotations et de
+        recolorations (150\,000 rotations contre 100\,000), car on insère toujours du même
+        côté. La hauteur monte à 31, toujours sous la borne de 33,2.
+\end{enumerate}
+
+% ==============================================================================
+\section{Conclusion}
+% ==============================================================================
+
+L'arbre rouge-noir garde une hauteur en $O(\log n)$ quel que soit l'ordre des données,
+grâce à deux outils seulement : la recoloration et la rotation. Même avec des données
+triées, pire cas d'un arbre binaire de recherche simple, sa hauteur reste sous
+$2\log_2(n+1)$. Face à la STL, notre version écrite à la main est plus rapide que
+\texttt{std::map}, mais \texttt{std::unordered\_map} reste bien meilleure quand on n'a pas
+besoin de garder les clés triées.
+
+\end{document}
