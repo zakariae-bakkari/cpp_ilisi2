@@ -32,7 +32,7 @@ while true; do
     echo -e " ${GREEN}12)${NC} ${BOLD}11_tas_max_priority_queue${NC}          : Tas max : notre TasMax vs std::priority_queue"
     echo -e " ${GREEN}13)${NC} ${BOLD}12_tas_min${NC}                         : Tas min (insertions + extraction du min sur fichier)"
     echo -e " ${GREEN}14)${NC} ${BOLD}13_tas_min_priority_queue${NC}          : Tas min : notre TasMin vs std::priority_queue"
-    echo -e " ${GREEN}15)${NC} ${BOLD}14_arbre_rouge_noir${NC}                : Arbre rouge-noir (insertion, cas A/B/C, verification)"
+    echo -e " ${GREEN}15)${NC} ${BOLD}14_arbre_rouge_noir${NC}                : Arbre rouge-noir (tableaux colores, temps et hauteur)"
     echo -e " ${YELLOW}9)${NC} ${BOLD}Exécuter tous les benchmarks${NC}    : Lance les benchmarks 04, 05, 06 et 08 à la suite"
     echo -e " ${RED}q)${NC} ${BOLD}Quitter${NC}"
     echo -e "${CYAN}----------------------------------------------------------------------${NC}"

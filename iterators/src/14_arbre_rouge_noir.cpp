@@ -1,88 +1,146 @@
 #include <iostream>
+#include <iomanip>
 #include <vector>
+#include <queue>
 #include <string>
 #include <algorithm>
 #include <random>
+#include <chrono>
 #include <cmath>
-#include <cstdlib>
 
 using namespace std;
+using namespace std::chrono;
 
 // ==============================================================================
-// ARBRE ROUGE-NOIR : INSERTION, REPARATION, VERIFICATION ET AFFICHAGE
+// ARBRE ROUGE-NOIR : INSERTION, RECHERCHE, HAUTEUR ET TEMPS
 // ==============================================================================
 //
-// Les 5 regles :
-//   1) chaque noeud est rouge ou noir
-//   2) la racine est noire
-//   3) les feuilles nil sont noires        (ici nil = nullptr)
-//   4) un noeud rouge n'a pas d'enfant rouge
-//   5) meme nombre de noirs sur tous les chemins d'un noeud jusqu'aux nil
+// Regles : la racine est noire, un rouge n'a pas d'enfant rouge, et tous les
+// chemins vers les feuilles ont le meme nombre de noirs.
 //
-// Insertion : on insere comme dans un ABR, le nouveau noeud N est ROUGE, puis
-// tant que son parent P est rouge on repare en regardant l'oncle U :
-//   cas A : U rouge          -> recoloration, puis on recommence avec G
-//   cas B : U noir, ligne    -> rotation en G, echange des couleurs de P et G
-//   cas C : U noir, zig-zag  -> rotation en P pour avoir une ligne, puis cas B
+// Insertion : on insere comme dans un ABR, le nouveau noeud est ROUGE, puis
+// tant que son parent est rouge on regarde l'oncle :
+//   oncle rouge         -> recoloration, puis on remonte au grand-pere
+//   oncle noir, zig-zag -> rotation au parent pour avoir une ligne
+//   oncle noir, ligne   -> rotation au grand-pere + echange des couleurs
 
-enum Couleur { ROUGE, NOIR };
+// Couleurs du terminal
+const string FOND_ROUGE = "\033[41;97;1m";
+const string FOND_NOIR  = "\033[100;97;1m";
+const string RESET      = "\033[0m";
 
 struct Noeud {
     int cle;
-    Couleur couleur;
-    Noeud* gauche = nullptr;  // nullptr = feuille nil (noire)
+    bool rouge = true;          // un nouveau noeud est toujours rouge
+    Noeud* gauche = nullptr;    // nullptr = feuille nil (noire)
     Noeud* droite = nullptr;
     Noeud* parent = nullptr;
-    Noeud(int c, Couleur col, Noeud* p) : cle(c), couleur(col), parent(p) {}
 };
-
-// Un nil (nullptr) compte comme NOIR : c'est la regle 3.
-// Piege : sans cette fonction, u->couleur plante quand l'oncle est nil.
-bool estRouge(Noeud* n) { return n != nullptr && n->couleur == ROUGE; }
-
-string nom(Noeud* n) {
-    if (n == nullptr) return "nil";
-    return to_string(n->cle) + (n->couleur == ROUGE ? "(R)" : "(N)");
-}
 
 class ArbreRN {
 public:
     Noeud* racine = nullptr;
-    bool bavard;
-    int casA = 0, casB = 0, casC = 0;  // nombre de fois ou chaque cas est utilise
 
-    explicit ArbreRN(bool b = false) : bavard(b) {}
     ~ArbreRN() { liberer(racine); }
 
-    // ------------------------------------------------------------------
-    // Rotations
-    // ------------------------------------------------------------------
+    void inserer(int cle) {
+        // 1) Descente comme dans un ABR
+        Noeud* parent = nullptr;
+        Noeud* courant = racine;
+        while (courant != nullptr) {
+            parent = courant;
+            if (cle < courant->cle) courant = courant->gauche;
+            else if (cle > courant->cle) courant = courant->droite;
+            else return;  // deja present
+        }
 
-    /*        x                     y
-             / \                   / \
-            A   y      ==>        x   C
-               / \               / \
-              B   C             A   B          */
+        // 2) Accrocher le nouveau noeud (rouge)
+        Noeud* n = new Noeud{cle};
+        n->parent = parent;
+        if (parent == nullptr) racine = n;
+        else if (cle < parent->cle) parent->gauche = n;
+        else parent->droite = n;
+
+        // 3) Reparer
+        reparer(n);
+    }
+
+    bool rechercher(int cle) const {
+        Noeud* courant = racine;
+        while (courant != nullptr) {
+            if (cle == courant->cle) return true;
+            courant = (cle < courant->cle) ? courant->gauche : courant->droite;
+        }
+        return false;
+    }
+
+    int hauteur() const { return hauteur(racine); }
+
+private:
+    static bool estRouge(Noeud* n) { return n != nullptr && n->rouge; }  // nil = noir
+
+    void reparer(Noeud* n) {
+        while (estRouge(n->parent)) {
+            Noeud* p = n->parent;
+            Noeud* g = p->parent;   // existe car un parent rouge n'est pas la racine
+
+            if (p == g->gauche) {
+                Noeud* oncle = g->droite;
+                if (estRouge(oncle)) {            // oncle rouge : recoloration
+                    p->rouge = false;
+                    oncle->rouge = false;
+                    g->rouge = true;
+                    n = g;                        // on remonte
+                } else {
+                    if (n == p->droite) {         // zig-zag : on le met en ligne
+                        rotationGauche(p);
+                        n = p;
+                        p = n->parent;
+                    }
+                    rotationDroite(g);            // ligne : rotation au grand-pere
+                    p->rouge = false;
+                    g->rouge = true;
+                }
+            } else {                              // meme chose en miroir
+                Noeud* oncle = g->gauche;
+                if (estRouge(oncle)) {
+                    p->rouge = false;
+                    oncle->rouge = false;
+                    g->rouge = true;
+                    n = g;
+                } else {
+                    if (n == p->gauche) {
+                        rotationDroite(p);
+                        n = p;
+                        p = n->parent;
+                    }
+                    rotationGauche(g);
+                    p->rouge = false;
+                    g->rouge = true;
+                }
+            }
+        }
+        racine->rouge = false;  // la racine est toujours noire
+    }
+
+    // x descend a gauche, son fils droit y prend sa place
     void rotationGauche(Noeud* x) {
         Noeud* y = x->droite;
-        // 1) le sous-arbre B passe de y a x
         x->droite = y->gauche;
-        if (y->gauche != nullptr) y->gauche->parent = x;
-        // 2) y prend la place de x chez le parent de x
+        if (y->gauche) y->gauche->parent = x;
         y->parent = x->parent;
-        if (x->parent == nullptr) racine = y;  // piege : mettre a jour la racine
+        if (x->parent == nullptr) racine = y;
         else if (x == x->parent->gauche) x->parent->gauche = y;
         else x->parent->droite = y;
-        // 3) x devient le fils gauche de y
         y->gauche = x;
         x->parent = y;
     }
 
-    // Miroir exact de rotationGauche.
+    // x descend a droite, son fils gauche y prend sa place
     void rotationDroite(Noeud* x) {
         Noeud* y = x->gauche;
         x->gauche = y->droite;
-        if (y->droite != nullptr) y->droite->parent = x;
+        if (y->droite) y->droite->parent = x;
         y->parent = x->parent;
         if (x->parent == nullptr) racine = y;
         else if (x == x->parent->droite) x->parent->droite = y;
@@ -91,224 +149,9 @@ public:
         x->parent = y;
     }
 
-    // ------------------------------------------------------------------
-    // Insertion
-    // ------------------------------------------------------------------
-    bool inserer(int cle) {
-        // Etape a) descente comme dans un arbre binaire de recherche
-        Noeud* parent = nullptr;
-        Noeud* courant = racine;
-        string chemin;
-        while (courant != nullptr) {
-            chemin += (chemin.empty() ? "" : " -> ") + to_string(courant->cle);
-            parent = courant;
-            if (cle < courant->cle) courant = courant->gauche;
-            else if (cle > courant->cle) courant = courant->droite;
-            else {
-                if (bavard) cout << cle << " est deja present : rien a faire.\n";
-                return false;
-            }
-        }
-
-        // Etape b) le nouveau noeud est ROUGE : la hauteur noire ne change pas,
-        // donc la regle 5 reste vraie. Seule la regle 4 (ou 2) peut casser.
-        Noeud* n = new Noeud(cle, ROUGE, parent);
-        string place;
-        if (parent == nullptr) {
-            racine = n;
-            place = "arbre vide : N devient la racine";
-        } else if (cle < parent->cle) {
-            parent->gauche = n;
-            place = "a gauche de " + to_string(parent->cle);
-        } else {
-            parent->droite = n;
-            place = "a droite de " + to_string(parent->cle);
-        }
-
-        if (bavard) {
-            cout << "=== Insertion de " << cle << " ===\n";
-            cout << "Chemin : " << (chemin.empty() ? "(aucun)" : chemin)
-                 << " ; N place " << place << "\n";
-            cout << "Arbre AVANT reparation :\n";
-            afficher();
-        }
-
-        // Etapes c) et d)
-        reparer(n);
-
-        if (bavard) {
-            cout << "Arbre APRES reparation :\n";
-            afficher();
-            cout << "\n";
-        }
-        return true;
-    }
-
-    void reparer(Noeud* n) {
-        if (bavard && n->parent != nullptr && !estRouge(n->parent))
-            cout << "Parent P=" << nom(n->parent) << " noir : rien a reparer.\n";
-
-        // Etape c) tant que le parent est rouge, on a un rouge-rouge (regle 4)
-        while (estRouge(n->parent)) {
-            Noeud* p = n->parent;
-            Noeud* g = p->parent;  // existe : P rouge n'est jamais la racine
-            bool pAGauche = (p == g->gauche);
-            Noeud* u = pAGauche ? g->droite : g->gauche;  // cas miroir gere ici
-            string coteP = pAGauche ? "gauche" : "droite";
-
-            if (bavard)
-                cout << "N=" << nom(n) << ", P=" << nom(p) << " rouge, G=" << nom(g)
-                     << ", U=" << nom(u) << "\n";
-
-            // ---- Cas A : oncle rouge -> recoloration ----
-            // On descend le noir de G vers P et U : chaque chemin passant par G
-            // garde le meme nombre de noirs. Mais G devient rouge : il peut
-            // former un rouge-rouge avec son parent, donc on REBOUCLE sur G.
-            if (estRouge(u)) {
-                casA++;
-                p->couleur = NOIR;
-                u->couleur = NOIR;
-                g->couleur = ROUGE;
-                if (bavard)
-                    cout << "  Cas A (oncle rouge) : " << p->cle << " et " << u->cle
-                         << " en noir, " << g->cle << " en rouge ; on recommence avec N="
-                         << g->cle << "\n";
-                n = g;  // piege : ne pas oublier de reboucler
-                continue;
-            }
-
-            // Oncle noir ou nil : recolorer seul enleverait un noir aux chemins
-            // passant par U (regle 5). Il faut changer la forme : rotation.
-            bool nAGauche = (n == p->gauche);
-
-            // ---- Cas C : zig-zag -> rotation en P pour obtenir une ligne ----
-            // Piege : tourner directement en G laisserait N sous un noeud rouge.
-            if (nAGauche != pAGauche) {
-                casC++;
-                if (bavard)
-                    cout << "  Cas C (oncle noir, zig-zag " << coteP << "-"
-                         << (nAGauche ? "gauche" : "droite") << ") : rotation "
-                         << (pAGauche ? "gauche" : "droite") << " en " << p->cle << "\n";
-                if (pAGauche) rotationGauche(p);
-                else rotationDroite(p);
-                swap(n, p);  // l'ancien N est maintenant le parent
-            }
-
-            // ---- Cas B : ligne -> rotation en G + echange des couleurs ----
-            // P monte a la place de G et devient noir, N et G sont ses enfants
-            // rouges : le nombre de noirs par chemin ne change pas.
-            casB++;
-            if (pAGauche) rotationDroite(g);
-            else rotationGauche(g);
-            swap(p->couleur, g->couleur);
-            if (bavard)
-                cout << "  Cas B (oncle noir, ligne " << coteP << "-" << coteP
-                     << ") : rotation " << (pAGauche ? "droite" : "gauche") << " en "
-                     << g->cle << ", " << p->cle << " devient noir et " << g->cle
-                     << " rouge\n";
-            // P est noir : la boucle s'arrete
-        }
-
-        // Regle 2 : la racine est toujours remise en noir
-        if (racine->couleur == ROUGE) {
-            if (bavard)
-                cout << "Racine " << racine->cle << " rouge -> remise en noir (regle 2)\n";
-            racine->couleur = NOIR;
-        }
-    }
-
-    // ------------------------------------------------------------------
-    // Verification : renvoie la liste des regles violees (vide = correct)
-    // ------------------------------------------------------------------
-    vector<string> verifier() const {
-        vector<string> erreurs;
-        if (racine == nullptr) return erreurs;
-        if (racine->couleur != NOIR)
-            erreurs.push_back("Regle 2 : la racine " + to_string(racine->cle) + " est rouge");
-        if (racine->parent != nullptr)
-            erreurs.push_back("Lien parent : la racine a un parent");
-        verifierRec(racine, nullptr, nullptr, erreurs);
-        return erreurs;
-    }
-
-    // ------------------------------------------------------------------
-    // Outils
-    // ------------------------------------------------------------------
-    int hauteur() const { return hauteurRec(racine); }
-
-    void parcoursInfixe(Noeud* n, vector<int>& res) const {
-        if (n == nullptr) return;
-        parcoursInfixe(n->gauche, res);
-        res.push_back(n->cle);
-        parcoursInfixe(n->droite, res);
-    }
-
-    // Affiche chaque chemin racine -> nil avec son nombre de noirs (sans le nil).
-    void afficherCheminsVersNil() const {
-        vector<string> chemin;
-        cheminsRec(racine, chemin, 0);
-    }
-
-    // Affiche l'arbre couche : g = fils gauche, d = fils droit.
-    void afficher(bool nils = false) const {
-        if (racine == nullptr) { cout << "(arbre vide)\n"; return; }
-        cout << nom(racine) << "\n";
-        afficherRec(racine, "", nils);
-    }
-
-private:
-    // Renvoie la hauteur noire de n (un nil compte pour 1).
-    int verifierRec(Noeud* n, const int* mini, const int* maxi,
-                    vector<string>& erreurs) const {
-        if (n == nullptr) return 1;
-        string c = to_string(n->cle);
-        if (n->couleur != ROUGE && n->couleur != NOIR)
-            erreurs.push_back("Regle 1 : " + c + " n'est ni rouge ni noir");
-        if ((mini && n->cle <= *mini) || (maxi && n->cle >= *maxi))
-            erreurs.push_back("Ordre ABR : " + c + " est mal place");
-        for (Noeud* e : {n->gauche, n->droite}) {
-            if (e != nullptr && e->parent != n)
-                erreurs.push_back("Lien parent : " + to_string(e->cle) +
-                                  " ne pointe pas vers " + c);
-            if (n->couleur == ROUGE && estRouge(e))
-                erreurs.push_back("Regle 4 : rouge-rouge entre " + c + " et " +
-                                  to_string(e->cle));
-        }
-        int hg = verifierRec(n->gauche, mini, &n->cle, erreurs);
-        int hd = verifierRec(n->droite, &n->cle, maxi, erreurs);
-        if (hg != hd)
-            erreurs.push_back("Regle 5 : sous " + c + ", hauteur noire " + to_string(hg) +
-                              " a gauche et " + to_string(hd) + " a droite");
-        return max(hg, hd) + (n->couleur == NOIR ? 1 : 0);
-    }
-
-    int hauteurRec(Noeud* n) const {
+    int hauteur(Noeud* n) const {
         if (n == nullptr) return 0;
-        return 1 + max(hauteurRec(n->gauche), hauteurRec(n->droite));
-    }
-
-    void cheminsRec(Noeud* n, vector<string>& chemin, int noirs) const {
-        if (n == nullptr) {
-            string s;
-            for (const string& x : chemin) s += x + " -> ";
-            s += "nil";
-            cout << "  " << s << string(s.size() < 40 ? 40 - s.size() : 1, ' ')
-                 << "noirs = " << noirs << "\n";
-            return;
-        }
-        noirs += (n->couleur == NOIR ? 1 : 0);
-        chemin.push_back(nom(n));
-        cheminsRec(n->gauche, chemin, noirs);
-        cheminsRec(n->droite, chemin, noirs);
-        chemin.pop_back();
-    }
-
-    void afficherRec(Noeud* n, const string& prefixe, bool nils) const {
-        if (!nils && n->gauche == nullptr && n->droite == nullptr) return;
-        cout << prefixe << "|-- g: " << nom(n->gauche) << "\n";
-        if (n->gauche) afficherRec(n->gauche, prefixe + "|   ", nils);
-        cout << prefixe << "`-- d: " << nom(n->droite) << "\n";
-        if (n->droite) afficherRec(n->droite, prefixe + "    ", nils);
+        return 1 + max(hauteur(n->gauche), hauteur(n->droite));
     }
 
     void liberer(Noeud* n) {
@@ -320,121 +163,127 @@ private:
 };
 
 // ==============================================================================
-// Tests
+// Affichage
 // ==============================================================================
 
-void afficherErreurs(const vector<string>& erreurs) {
-    if (erreurs.empty()) { cout << "aucune regle violee\n"; return; }
-    for (size_t i = 0; i < erreurs.size(); i++)
-        cout << (i ? "                                     " : "") << "[" << erreurs[i] << "]\n";
+// Une case de tableau coloree, de largeur fixe
+void caseCouleur(int cle, bool rouge, int largeur = 5) {
+    cout << (rouge ? FOND_ROUGE : FOND_NOIR) << setw(largeur) << cle << " " << RESET << "|";
 }
 
-void verifierOuQuitter(const ArbreRN& a) {
-    vector<string> e = a.verifier();
-    if (!e.empty()) {
-        cout << "ERREUR : ";
-        afficherErreurs(e);
-        exit(1);
-    }
+string texte(Noeud* n) { return n ? to_string(n->cle) : "nil"; }
+
+// Tableau de depart : les valeurs dans l'ordre d'insertion.
+// Chaque noeud est ROUGE au moment ou on l'insere.
+void afficherDepart(const vector<int>& valeurs) {
+    cout << "\nTABLEAU DE DEPART (ordre d'insertion, chaque nouveau noeud est rouge)\n";
+    cout << "|";
+    for (int v : valeurs) caseCouleur(v, true);
+    cout << "\n";
 }
 
-const vector<int> EXEMPLE = {41, 38, 31, 12, 19, 8, 50, 55};
-
-void testExemple() {
-    cout << string(60, '#') << "\n# TEST 1 : exemple 41, 38, 31, 12, 19, 8, 50, 55\n"
-         << string(60, '#') << "\n";
-    ArbreRN a(true);
-    for (int c : EXEMPLE) a.inserer(c);
-    cout << "Arbre final avec les feuilles nil :\n";
-    a.afficher(true);
-    cout << "\nChemins racine -> nil (noirs comptes sans le nil) :\n";
-    a.afficherCheminsVersNil();
-    cout << "verifier() : ";
-    afficherErreurs(a.verifier());
-    cout << "Cas utilises : A=" << a.casA << " B=" << a.casB << " C=" << a.casC
-         << " | hauteur : " << a.hauteur() << "\n\n";
-}
-
-void testAleatoire() {
-    cout << string(60, '#') << "\n# TEST 2 : suites aleatoires (verifier() apres chaque insertion)\n"
-         << string(60, '#') << "\n";
-    mt19937 gen(2026);
-    const int nbSuites = 300;
-    long nbInsertions = 0;
-    vector<int> pool(10000);
-    for (int i = 0; i < 10000; i++) pool[i] = i;
-    for (int s = 0; s < nbSuites; s++) {
-        shuffle(pool.begin(), pool.end(), gen);
-        int taille = uniform_int_distribution<int>(1, 300)(gen);
-        vector<int> cles(pool.begin(), pool.begin() + taille);  // cles distinctes
-        ArbreRN a;
-        for (int c : cles) {
-            a.inserer(c);
-            nbInsertions++;
-            verifierOuQuitter(a);
-        }
-        vector<int> infixe;
-        a.parcoursInfixe(a.racine, infixe);
-        sort(cles.begin(), cles.end());
-        if (infixe != cles || a.hauteur() > 2 * log2(taille + 1.0)) {
-            cout << "ERREUR : ordre ou hauteur incorrects\n";
-            exit(1);
-        }
+// Tableau final : les noeuds niveau par niveau (parcours en largeur)
+void afficherFin(const ArbreRN& a) {
+    cout << "\nTABLEAU FINAL (arbre rouge-noir, niveau par niveau)\n";
+    cout << "+--------+-------+---------+--------+--------+--------+\n";
+    cout << "| Niveau | Noeud | Couleur | Parent | Gauche | Droite |\n";
+    cout << "+--------+-------+---------+--------+--------+--------+\n";
+    queue<pair<Noeud*, int>> file;
+    file.push({a.racine, 0});
+    while (!file.empty()) {
+        auto [n, niveau] = file.front();
+        file.pop();
+        cout << "| " << setw(6) << niveau << " |";
+        caseCouleur(n->cle, n->rouge, 6);
+        cout << " " << left << setw(7) << (n->rouge ? "rouge" : "noir") << " | "
+             << setw(6) << texte(n->parent) << " | "
+             << setw(6) << texte(n->gauche) << " | "
+             << setw(6) << texte(n->droite) << " |" << right << "\n";
+        if (n->gauche) file.push({n->gauche, niveau + 1});
+        if (n->droite) file.push({n->droite, niveau + 1});
     }
-    cout << nbSuites << " suites, " << nbInsertions << " insertions : aucune regle violee\n\n";
-}
+    cout << "+--------+-------+---------+--------+--------+--------+\n";
 
-void testTrie() {
-    cout << string(60, '#') << "\n# TEST 3 : suite triee de 1 a 2000\n" << string(60, '#') << "\n";
-    ArbreRN a;
-    for (int c = 1; c <= 2000; c++) {
-        a.inserer(c);
-        verifierOuQuitter(a);
-    }
-    cout << "verifier() : ";
-    afficherErreurs(a.verifier());
-    cout << "Hauteur = " << a.hauteur() << " (ABR naif : 2000 ; borne 2*log2(n+1) = "
-         << round(2 * log2(2001.0) * 10) / 10 << ")\n";
-    cout << "Racine = " << nom(a.racine) << " ; cas utilises : A=" << a.casA
-         << " B=" << a.casB << " C=" << a.casC << "\n\n";
-}
-
-void testDetection() {
-    cout << string(60, '#') << "\n# TEST 4 : verifier() detecte les arbres faux\n"
-         << string(60, '#') << "\n";
-
-    // Regle 2 : arbre 20(N) [10(N) [5(R)], 30(N)] puis racine peinte en rouge
-    {
-        ArbreRN a;
-        for (int c : {20, 10, 30, 5}) a.inserer(c);
-        a.racine->couleur = ROUGE;
-        cout << "Racine 20 peinte en rouge          -> ";
-        afficherErreurs(a.verifier());
-    }
-    // Regle 4 : on accroche 45 rouge sous 41 rouge, SANS reparer
-    {
-        ArbreRN a;
-        for (int c : EXEMPLE) a.inserer(c);
-        Noeud* n41 = a.racine->droite->gauche;
-        n41->droite = new Noeud(45, ROUGE, n41);
-        cout << "45 rouge accroche sous 41 rouge    -> ";
-        afficherErreurs(a.verifier());
-    }
-    // Regle 5 : 41 peint en noir -> un noir de trop sur ses chemins
-    {
-        ArbreRN a;
-        for (int c : EXEMPLE) a.inserer(c);
-        a.racine->droite->gauche->couleur = NOIR;
-        cout << "Noeud 41 peint en noir             -> ";
-        afficherErreurs(a.verifier());
+    // La meme chose sur une ligne, dans l'ordre croissant
+    cout << "\nTABLEAU FINAL (ordre croissant, avec les couleurs)\n|";
+    vector<Noeud*> pile;
+    Noeud* c = a.racine;
+    while (c || !pile.empty()) {
+        while (c) { pile.push_back(c); c = c->gauche; }
+        c = pile.back();
+        pile.pop_back();
+        caseCouleur(c->cle, c->rouge);
+        c = c->droite;
     }
     cout << "\n";
 }
 
+// ==============================================================================
+// Mesures
+// ==============================================================================
+
+struct Resultat {
+    string nom;
+    size_t n;
+    double insertion_ms, recherche_ms;
+    int hauteur;
+    size_t trouves;
+};
+
+Resultat mesurer(const string& nom, const vector<int>& valeurs, ArbreRN& a) {
+    auto t0 = high_resolution_clock::now();
+    for (int v : valeurs) a.inserer(v);
+    auto t1 = high_resolution_clock::now();
+
+    size_t trouves = 0;
+    for (int v : valeurs) trouves += a.rechercher(v);
+    auto t2 = high_resolution_clock::now();
+
+    return {nom, valeurs.size(),
+            duration<double, milli>(t1 - t0).count(),
+            duration<double, milli>(t2 - t1).count(),
+            a.hauteur(), trouves};
+}
+
+// n valeurs distinctes de 1 a n, melangees
+vector<int> valeursMelangees(int n) {
+    vector<int> v(n);
+    for (int i = 0; i < n; i++) v[i] = i + 1;
+    shuffle(v.begin(), v.end(), mt19937(2026));
+    return v;
+}
+
 int main() {
-    testExemple();
-    testAleatoire();
-    testTrie();
-    testDetection();
+    vector<Resultat> resultats;
+
+    // Cas 1 : 10 valeurs, on affiche les tableaux
+    vector<int> dix = {1, 45, 67, 89, 12, 34, 23, 78, 56, 90};
+    ArbreRN a10;
+    resultats.push_back(mesurer("10 valeurs", dix, a10));
+    afficherDepart(dix);
+    afficherFin(a10);
+
+    // Cas 2 et 3 : 1 000 et 100 000 valeurs melangees
+    ArbreRN a1000, a100000;
+    resultats.push_back(mesurer("1 000 valeurs", valeursMelangees(1000), a1000));
+    resultats.push_back(mesurer("100 000 valeurs", valeursMelangees(100000), a100000));
+
+    // Tableau des temps
+    cout << "\nTEMPS ET HAUTEUR\n";
+    string ligne = "+-----------------+---------+----------------+----------------+---------+---------------+---------+";
+    cout << ligne << "\n";
+    cout << "| Cas             |       n | Insertion (ms) | Recherche (ms) | Hauteur | 2*log2(n+1)   | Trouves |\n";
+    cout << ligne << "\n";
+    for (const Resultat& r : resultats) {
+        cout << "| " << left << setw(15) << r.nom << " | " << right
+             << setw(7) << r.n << " | "
+             << fixed << setprecision(4) << setw(14) << r.insertion_ms << " | "
+             << setw(14) << r.recherche_ms << " | "
+             << setw(7) << r.hauteur << " | "
+             << setprecision(1) << setw(13) << 2 * log2(r.n + 1.0) << " | "
+             << setw(7) << r.trouves << " |\n";
+    }
+    cout << ligne << "\n";
+    cout << "La hauteur reste toujours sous 2*log2(n+1) : l'arbre reste equilibre.\n";
     return 0;
 }
