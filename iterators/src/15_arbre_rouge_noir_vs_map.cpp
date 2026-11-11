@@ -5,6 +5,7 @@
 #include <set>
 #include <unordered_map>
 #include <string>
+#include <sstream>
 #include <algorithm>
 #include <random>
 #include <chrono>
@@ -280,15 +281,22 @@ Temps mesurerSTL(const vector<int>& cles, const vector<int>& absents) {
     return t;
 }
 
+// Temps avec son unite : "38.8 ms" sous une seconde, "23.38 s" au-dessus
+string duree(double ms) {
+    ostringstream s;
+    s << fixed;
+    if (ms < 1000) s << setprecision(1) << ms << " ms";
+    else s << setprecision(2) << ms / 1000 << " s ";
+    return s.str();
+}
+
 void ligne(const string& donnees, const string& nom, const Temps& t, size_t n) {
     double total = t.insertion + t.presents + t.absents + t.parcours + t.suppression;
-    cout << "| " << left << setw(10) << donnees << " | " << setw(18) << nom << right
-         << fixed << setprecision(1)
-         << " | " << setw(9) << t.insertion << " | " << setw(9) << t.presents
-         << " | " << setw(9) << t.absents << " | " << setw(8) << t.parcours
-         << " | " << setw(11) << t.suppression << " | " << setw(9) << total << " | "
-         << setw(7) << (t.hauteur < 0 ? "-" : to_string(t.hauteur)) << " | "
-         << setw(5) << (t.trouves == (long long)n ? "ok" : "FAUX") << " |" << endl;
+    cout << "| " << left << setw(10) << donnees << " | " << setw(18) << nom << right;
+    for (double d : {t.insertion, t.presents, t.absents, t.parcours, t.suppression, total})
+        cout << " | " << setw(11) << duree(d);
+    cout << " | " << setw(7) << (t.hauteur < 0 ? "-" : to_string(t.hauteur)) << " |" << endl;
+    if (t.trouves != (long long)n) cout << "ERREUR : recherche incorrecte pour " << nom << "\n";
 }
 
 // n valeurs depart, depart+2, depart+4, ... rangees selon le type :
@@ -305,9 +313,9 @@ vector<int> generer(int n, int depart, const string& type, mt19937& gen) {
 }
 
 void comparer(int n) {
-    string sep = "+------------+--------------------+-----------+-----------+-----------+----------+-------------+-----------+---------+-------+\n";
-    cout << "\n=== n = " << n << " cles (temps en ms) ===\n" << sep
-         << "| Donnees    | Structure          | Insertion | Rech. OK  | Rech. KO  | Parcours | Suppression | Total     | Hauteur | Verif |\n"
+    string sep = "+------------+--------------------+-------------+-------------+-------------+-------------+-------------+-------------+---------+\n";
+    cout << "\n=== n = " << n << " cles ===\n" << sep
+         << "| Donnees    | Structure          |   Insertion |    Rech. OK |    Rech. KO |    Parcours | Suppression |       Total | Hauteur |\n"
          << sep;
     mt19937 gen(2026);
     for (string type : {"aleatoire", "triee", "partielle"}) {
@@ -318,7 +326,7 @@ void comparer(int n) {
         ligne(type, "std::unordered_map", mesurerSTL<unordered_map<int, int>>(cles, absents), n);
         cout << sep;
     }
-    cout << "Borne de hauteur 2*log2(n+1) = " << setprecision(1) << 2 * log2(n + 1.0) << "\n";
+    cout << "Borne de hauteur 2*log2(n+1) = " << fixed << setprecision(1) << 2 * log2(n + 1.0) << "\n";
 }
 
 int main() {
