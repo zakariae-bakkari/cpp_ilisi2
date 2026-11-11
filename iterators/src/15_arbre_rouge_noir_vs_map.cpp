@@ -294,7 +294,7 @@ void ligne(const string& donnees, const string& nom, const Temps& t, size_t n) {
     double total = t.insertion + t.presents + t.absents + t.parcours + t.suppression;
     cout << "| " << left << setw(10) << donnees << " | " << setw(18) << nom << right;
     for (double d : {t.insertion, t.presents, t.absents, t.parcours, t.suppression, total})
-        cout << " | " << setw(11) << duree(d);
+        cout << " | " << setw(13) << duree(d);
     cout << " | " << setw(7) << (t.hauteur < 0 ? "-" : to_string(t.hauteur)) << " |" << endl;
     if (t.trouves != (long long)n) cout << "ERREUR : recherche incorrecte pour " << nom << "\n";
 }
@@ -313,9 +313,10 @@ vector<int> generer(int n, int depart, const string& type, mt19937& gen) {
 }
 
 void comparer(int n) {
-    string sep = "+------------+--------------------+-------------+-------------+-------------+-------------+-------------+-------------+---------+\n";
+    string sep = "+------------+--------------------+---------------+---------------+---------------+---------------+---------------+---------------+---------+\n";
     cout << "\n=== n = " << n << " cles ===\n" << sep
-         << "| Donnees    | Structure          |   Insertion |    Rech. OK |    Rech. KO |    Parcours | Suppression |       Total | Hauteur |\n"
+         << "| Donnees    | Structure          |     Insertion |     Recherche |     Recherche |      Parcours |   Suppression |         Total | Hauteur |\n"
+         << "|            |                    |               |  cle presente |   cle absente |               |               |               |         |\n"
          << sep;
     mt19937 gen(2026);
     for (string type : {"aleatoire", "triee", "partielle"}) {
@@ -332,7 +333,8 @@ void comparer(int n) {
 int main() {
     cout << "Test de correction (200 000 operations au hasard vs std::set) : "
          << (testCorrection() ? "OK" : "ECHEC") << "\n"
-         << "Rech. OK = recherche des n cles presentes, Rech. KO = n cles absentes.\n"
+         << "Recherche cle presente : on cherche les n cles inserees (toutes trouvees).\n"
+         << "Recherche cle absente  : on cherche n cles qui ne sont pas dans la structure.\n"
          << "Parcours : ordre croissant pour l'arbre et map, ordre quelconque pour unordered_map.\n"
          << "Suppression : toutes les cles, dans l'ordre d'insertion.\n"
          << "(10 000 000 de cles : compter plusieurs minutes)\n";
