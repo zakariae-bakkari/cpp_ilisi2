@@ -33,10 +33,11 @@ while true; do
     echo -e " ${GREEN}13)${NC} ${BOLD}12_tas_min${NC}                         : Tas min (insertions + extraction du min sur fichier)"
     echo -e " ${GREEN}14)${NC} ${BOLD}13_tas_min_priority_queue${NC}          : Tas min : notre TasMin vs std::priority_queue"
     echo -e " ${GREEN}15)${NC} ${BOLD}14_arbre_rouge_noir${NC}                : Arbre rouge-noir (tableaux colores, temps et hauteur)"
+    echo -e " ${GREEN}16)${NC} ${BOLD}15_arbre_rouge_noir_vs_map${NC}         : Notre arbre rouge-noir vs std::map vs std::unordered_map"
     echo -e " ${YELLOW}9)${NC} ${BOLD}Exécuter tous les benchmarks${NC}    : Lance les benchmarks 04, 05, 06 et 08 à la suite"
     echo -e " ${RED}q)${NC} ${BOLD}Quitter${NC}"
     echo -e "${CYAN}----------------------------------------------------------------------${NC}"
-    read -rp " Entrez votre choix [1-15 ou q] : " choice
+    read -rp " Entrez votre choix [1-16 ou q] : " choice
 
     case "$choice" in
         1)
@@ -105,6 +106,10 @@ while true; do
         15)
             echo -e "\n${YELLOW}>>> Exécution de 14_arbre_rouge_noir :${NC}\n"
             ./executables/14_arbre_rouge_noir
+            ;;
+        16)
+            echo -e "\n${YELLOW}>>> Exécution de 15_arbre_rouge_noir_vs_map :${NC}\n"
+            ./executables/15_arbre_rouge_noir_vs_map
             ;;
         q|Q)
             echo -e "\n${GREEN}Au revoir !${NC}\n"
