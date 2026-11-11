@@ -72,6 +72,9 @@ run_12: $(BIN_DIR)/12_tas_min data
 run_13: $(BIN_DIR)/13_tas_min_priority_queue data
 	./$(BIN_DIR)/13_tas_min_priority_queue
 
+run_14: $(BIN_DIR)/14_arbre_rouge_noir
+	./$(BIN_DIR)/14_arbre_rouge_noir
+
 run_benchmarks: run_04 run_05 run_06 run_08
 
 help:
@@ -80,5 +83,5 @@ help:
 	@echo "  make all                   : Compile tous les fichiers source dans $(BIN_DIR)/"
 	@echo "  make data                  : Cree data/data_10M.txt (10 000 000 valeurs, pour 10 a 13)"
 	@echo "  make clean                 : Supprime les executables compiles"
-	@echo "  make run_01 ... run_13     : Execute directement un programme precis"
+	@echo "  make run_01 ... run_14     : Execute directement un programme precis"
 	@echo "  make run_benchmarks        : Execute les benchmarks 04, 05, 06 et 08"
