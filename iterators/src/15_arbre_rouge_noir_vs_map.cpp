@@ -18,7 +18,7 @@ using namespace std::chrono;
 // NOTRE ARBRE ROUGE-NOIR (fait main) VS std::map VS std::unordered_map
 // ==============================================================================
 // Temps d'insertion, de recherche (cles presentes / absentes), de parcours et
-// de suppression, pour 100 000 et 10 000 000 cles, avec des donnees
+// de suppression, pour 100 000 cles, avec des donnees
 // aleatoires, triees et partiellement triees.
 //   - std::map           : arbre rouge-noir de la STL -> O(log n), cles triees
 //   - std::unordered_map : table de hachage           -> O(1) en moyenne, pas d'ordre
@@ -336,9 +336,7 @@ int main() {
          << "Recherche cle presente : on cherche les n cles inserees (toutes trouvees).\n"
          << "Recherche cle absente  : on cherche n cles qui ne sont pas dans la structure.\n"
          << "Parcours : ordre croissant pour l'arbre et map, ordre quelconque pour unordered_map.\n"
-         << "Suppression : toutes les cles, dans l'ordre d'insertion.\n"
-         << "(10 000 000 de cles : compter plusieurs minutes)\n";
+         << "Suppression : toutes les cles, dans l'ordre d'insertion.\n";
     comparer(100000);
-    comparer(10000000);
     return 0;
 }
