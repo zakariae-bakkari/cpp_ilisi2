@@ -90,7 +90,7 @@ hauteur de l'arbre. Ensuite, le comparer à \texttt{std::map} (l'arbre rouge-noi
 et à \texttt{std::unordered\_map} (une table de hachage).
 
 \textbf{Code source :}
-\begin{itemize}\footnotesize
+\begin{itemize}\footnotesize\sloppy
   \item arbre rouge-noir, dessin coloré et temps (option \textbf{15} du menu
         \texttt{./run.sh}, ou \texttt{make run\_14}) :\\
         \url{https://github.com/zakariae-bakkari/cpp_ilisi2/blob/main/iterators/src/14_arbre_rouge_noir.cpp}
@@ -232,7 +232,7 @@ Machine : Intel Core i5-1135G7, \texttt{g++} 15.2, option \texttt{-O3}. Temps : 
 \hline
 $n$ & \textbf{Insertion} & \textbf{Recherche des $n$ valeurs} & \textbf{Hauteur} & $2\log_2(n+1)$ \\
 \hline
-10      & 1,8 $\mu$s & 0,4 $\mu$s & 4  & 6,9 \\
+10      & 0,0018 ms & 0,0004 ms & 4  & 6,9 \\
 \hline
 1\,000  & 0,17 ms    & 0,05 ms    & 12 & 19,9 \\
 \hline
@@ -252,27 +252,27 @@ La suppression de notre arbre est vérifiée par 200\,000 opérations au hasard 
 
 \begin{table}[H]
 \centering
-\small
+\footnotesize
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{|l|l|r|r|r|r|r|r|r|}
 \hline
 \textbf{Données} & \textbf{Structure} & \entete{Insertion} & \entete{Recherche\\clé présente}
   & \entete{Recherche\\clé absente} & \entete{Parcours} & \entete{Suppres-\\sion} & \entete{Total} & \entete{Hau-\\teur} \\
 \hline
-\multirow{3}{*}{aléatoires} & notre arbre & 45,7 & 18,4 & 23,2 & 3,0 & 43,2 & 133,0 & 20 \\
-  & \texttt{map}           & 57,9 & 49,1 & 57,5 & 8,5 & 56,5 & 228,2 & -- \\
-  & \texttt{unordered\_map} & \textbf{15,6} & \textbf{1,1} & \textbf{2,4} & \textbf{1,5} & \textbf{9,1} & \textbf{29,6} & -- \\
+\multirow{3}{*}{aléatoires} & notre arbre & 45,7~ms & 18,4~ms & 23,2~ms & 3,0~ms & 43,2~ms & 133,0~ms & 20 \\
+  & \texttt{map}           & 57,9~ms & 49,1~ms & 57,5~ms & 8,5~ms & 56,5~ms & 228,2~ms & -- \\
+  & \texttt{unordered\_map} & \textbf{15,6~ms} & \textbf{1,1~ms} & \textbf{2,4~ms} & \textbf{1,5~ms} & \textbf{9,1~ms} & \textbf{29,6~ms} & -- \\
 \hline
-\multirow{3}{*}{triées} & notre arbre & 36,5 & 6,4 & 6,9 & 0,9 & 15,7 & 65,9 & 31 \\
-  & \texttt{map}           & 32,0 & 17,8 & 17,7 & 1,7 & 13,9 & 83,1 & -- \\
-  & \texttt{unordered\_map} & \textbf{8,4} & \textbf{0,7} & \textbf{0,8} & \textbf{0,4} & \textbf{4,9} & \textbf{15,0} & -- \\
+\multirow{3}{*}{triées} & notre arbre & 36,5~ms & 6,4~ms & 6,9~ms & 0,9~ms & 15,7~ms & 65,9~ms & 31 \\
+  & \texttt{map}           & 32,0~ms & 17,8~ms & 17,7~ms & 1,7~ms & 13,9~ms & 83,1~ms & -- \\
+  & \texttt{unordered\_map} & \textbf{8,4~ms} & \textbf{0,7~ms} & \textbf{0,8~ms} & \textbf{0,4~ms} & \textbf{4,9~ms} & \textbf{15,0~ms} & -- \\
 \hline
-\multirow{3}{*}{partielles} & notre arbre & 32,2 & 11,8 & 13,4 & 1,5 & 22,3 & 81,0 & 29 \\
-  & \texttt{map}           & 35,9 & 22,7 & 23,3 & 2,9 & 28,6 & 112,6 & -- \\
-  & \texttt{unordered\_map} & \textbf{9,8} & \textbf{0,7} & \textbf{1,3} & \textbf{0,7} & \textbf{6,2} & \textbf{19,0} & -- \\
+\multirow{3}{*}{partielles} & notre arbre & 32,2~ms & 11,8~ms & 13,4~ms & 1,5~ms & 22,3~ms & 81,0~ms & 29 \\
+  & \texttt{map}           & 35,9~ms & 22,7~ms & 23,3~ms & 2,9~ms & 28,6~ms & 112,6~ms & -- \\
+  & \texttt{unordered\_map} & \textbf{9,8~ms} & \textbf{0,7~ms} & \textbf{1,3~ms} & \textbf{0,7~ms} & \textbf{6,2~ms} & \textbf{19,0~ms} & -- \\
 \hline
 \end{tabular}
-\caption{Temps en millisecondes pour 100\,000 clés (en gras : le plus rapide).}
+\caption{Temps pour 100\,000 clés (en gras : le plus rapide).}
 \end{table}
 
 \begin{table}[H]
