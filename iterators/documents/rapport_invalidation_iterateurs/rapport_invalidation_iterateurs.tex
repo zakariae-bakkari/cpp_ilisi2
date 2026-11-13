@@ -81,8 +81,8 @@
 \newcommand{\non}{\textcolor{rouge}{\textbf{invalide}}}
 
 \title{\textbf{Insertion et validité des itérateurs}\\[4pt]
-       \large \texttt{std::vector}, \texttt{std::map} et \texttt{std::unordered\_map} avec des
-       paires (clé, valeur)}
+       \large \texttt{std::vector}, \texttt{std::map} et la table de hachage
+       \texttt{std::unordered\_map}, avec des paires (clé, valeur)}
 \author{Zakariae Bakkari\\
         \small Programmation Objet Avancée et Design Patterns\\
         \small\url{https://github.com/zakariae-bakkari/cpp_ilisi2}}
@@ -124,7 +124,7 @@ une mauvaise valeur, planter, ou sembler marcher par hasard.
 \small
 \begin{tabular}{|p{3.6cm}|p{4.2cm}|p{3.4cm}|p{3.4cm}|}
 \hline
-\textbf{Opération} & \textbf{\texttt{vector}} & \textbf{\texttt{map}} & \textbf{\texttt{unordered\_map}} \\
+\textbf{Opération} & \textbf{\texttt{vector}} & \textbf{\texttt{map}} & \textbf{\texttt{unordered\_map}}\newline\textbf{(table de hachage)} \\
 \hline
 insertion, sans réallocation ni rehash
   & \non{} à partir du point d'insertion (\oui{} avant)
@@ -221,7 +221,7 @@ reste donc valide.
 \caption{Insérer 0 dans une \texttt{map} : seuls des pointeurs changent.}
 \end{figure}
 
-\subsection{\texttt{unordered\_map} : des cases, et des nœuds rangés dedans}
+\subsection{Table de hachage (\texttt{unordered\_map}) : des cases, et des nœuds rangés dedans}
 
 Une table de hachage a un tableau de \textbf{cases} (\textit{buckets}). La clé est hachée
 pour choisir sa case, et chaque paire est, comme dans la \texttt{map}, dans son propre
@@ -265,7 +265,7 @@ comportement indéfini) : il compare les adresses avant et après, et relit les 
 4 & \texttt{map}, insertion de (0,0) puis de 100\,000 paires
   & \texttt{it->first} = 20, \texttt{it->second} = 200 & \oui \\
 \hline
-5 & \texttt{unordered\_map}, insertion de (0,0) puis de 100\,000 paires
+5 & \texttt{unordered\_map} (table de hachage), insertion de (0,0) puis de 100\,000 paires
   & 13 $\to$ 172\,933 cases (rehash) ; la paire est restée à la même adresse
   & \non{} (référence \oui) \\
 \hline
@@ -290,7 +290,8 @@ regarde à la fin s'il est encore valide. Quatre façons de ranger les paires :
         (\texttt{lower\_bound} puis \texttt{insert}), pour pouvoir chercher par dichotomie ;
   \item \textbf{\texttt{vector} (\texttt{push\_back})} : les paires sont ajoutées à la fin,
         sans ordre (pas de recherche rapide possible) ;
-  \item \textbf{\texttt{map}} et \textbf{\texttt{unordered\_map}}.
+  \item \textbf{\texttt{map}} : l'arbre rouge-noir de la STL ;
+  \item \textbf{\texttt{unordered\_map}} : la \textbf{table de hachage} de la STL.
 \end{itemize}
 
 \begin{table}[H]
@@ -306,26 +307,26 @@ regarde à la fin s'il est encore valide. Quatre façons de ranger les paires :
 \multirow{4}{*}{aléatoires}
   & \texttt{vector} trié        & 616,7 ms & 8,6 ms  & 18 & 2\,502\,036\,049 & \non & \non \\
   & \texttt{vector} (push\_back) & 0,1 ms   & --      & 18 & 0               & \non & \non \\
-  & \texttt{map}                & 14,0 ms  & 14,6 ms & 0  & 0               & \oui & \oui \\
-  & \texttt{unordered\_map}      & 4,7 ms   & 0,3 ms  & 13 & 0               & \non & \oui \\
+  & \texttt{map} (arbre)     & 14,0 ms  & 14,6 ms & 0  & 0               & \oui & \oui \\
+  & \textbf{table de hachage} & 4,7 ms   & 0,3 ms  & 13 & 0               & \non & \oui \\
 \hline
 \multirow{4}{*}{triées}
   & \texttt{vector} trié        & 1,9 ms   & 4,0 ms  & 18 & 0               & \non & \non \\
   & \texttt{vector} (push\_back) & 0,1 ms   & --      & 18 & 0               & \non & \non \\
-  & \texttt{map}                & 7,6 ms   & 5,5 ms  & 0  & 0               & \oui & \oui \\
-  & \texttt{unordered\_map}      & 2,5 ms   & 0,3 ms  & 13 & 0               & \non & \oui \\
+  & \texttt{map} (arbre)     & 7,6 ms   & 5,5 ms  & 0  & 0               & \oui & \oui \\
+  & \textbf{table de hachage} & 2,5 ms   & 0,3 ms  & 13 & 0               & \non & \oui \\
 \hline
 \multirow{4}{*}{presque triées}
   & \texttt{vector} trié        & 132,3 ms & 5,0 ms  & 18 & 576\,523\,734   & \non & \non \\
   & \texttt{vector} (push\_back) & 0,2 ms   & --      & 18 & 0               & \non & \non \\
-  & \texttt{map}                & 10,3 ms  & 8,0 ms  & 0  & 0               & \oui & \oui \\
-  & \texttt{unordered\_map}      & 3,2 ms   & 0,3 ms  & 13 & 0               & \non & \oui \\
+  & \texttt{map} (arbre)     & 10,3 ms  & 8,0 ms  & 0  & 0               & \oui & \oui \\
+  & \textbf{table de hachage} & 3,2 ms   & 0,3 ms  & 13 & 0               & \non & \oui \\
 \hline
 \end{tabular}
 \caption{100\,000 paires. Temps : médianes sur 7 exécutions (Intel Core i5-1135G7,
 \texttt{g++} 15.2, \texttt{-O3}) ; les compteurs sont identiques à chaque exécution.
 \og Invalidations \fg{} : nombre de réallocations (\texttt{vector}) ou de rehash
-(\texttt{unordered\_map}), chacune invalide tous les itérateurs. \og Éléments décalés \fg{} : total des paires déplacées d'une case par les insertions au
+(table de hachage, \texttt{unordered\_map}), chacune invalide tous les itérateurs. \og Éléments décalés \fg{} : total des paires déplacées d'une case par les insertions au
 milieu du \texttt{vector}.}
 \end{table}
 
@@ -334,7 +335,7 @@ milieu du \texttt{vector}.}
   \item \textbf{La validité ne dépend pas de l'ordre des données.} Dans les trois scénarios,
         l'itérateur gardé est invalide pour le \texttt{vector} (18 réallocations : la
         capacité double à chaque fois, $2^{17} \geq 100\,000$) et pour
-        l'\texttt{unordered\_map} (13 rehash), et toujours valide pour la \texttt{map}.
+        la table de hachage (13 rehash), et toujours valide pour la \texttt{map}.
   \item \textbf{L'ordre des données change surtout le coût du \texttt{vector} trié.} Avec
         des clés aléatoires, chaque insertion décale en moyenne la moitié du tableau :
         2,5 milliards de déplacements ($\approx n^2/4$), 617~ms. Avec des clés triées, on

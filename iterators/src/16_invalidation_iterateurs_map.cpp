@@ -105,7 +105,7 @@ void demonstrations() {
         bool rehash = u.bucket_count() != casesAvant;
         bool memeAdresse = adresse(&*u.find(20)) == adresse(p);
         (void)it;
-        cout << "5) unordered_map, insert de (0,0) puis de 100 000 autres paires :\n"
+        cout << "5) unordered_map (table de hachage), insert de (0,0) puis de 100 000 autres paires :\n"
              << "   cases : " << casesAvant << " -> " << u.bucket_count()
              << (rehash ? " (rehash : les paires sont redistribuees)" : "") << "\n"
              << "   -> iterateur " << ouiNon(!rehash) << " : apres un rehash, l'ordre de parcours change.\n"
@@ -198,7 +198,7 @@ Resultat vectorPushBack(const vector<int>& cles) {
 }
 
 Resultat carte(const vector<int>& cles) {
-    Resultat r{"map", 0, 0, 0, 0, "", ""};
+    Resultat r{"map (arbre)", 0, 0, 0, 0, "", ""};
     map<int, int> m;
     map<int, int>::iterator garde;
     r.insertion = ms([&] {
@@ -215,7 +215,7 @@ Resultat carte(const vector<int>& cles) {
 }
 
 Resultat tableHachage(const vector<int>& cles) {
-    Resultat r{"unordered_map", 0, 0, 0, 0, "", ""};
+    Resultat r{"table de hachage", 0, 0, 0, 0, "", ""};
     unordered_map<int, int> u;
     uintptr_t adresseGarde = 0;
     r.insertion = ms([&] {
@@ -271,7 +271,8 @@ void scenarios(int n) {
         }
         cout << sep;
     }
-    cout << "vector (push_back) : non trie, donc pas de recherche rapide (il faudrait tout parcourir).\n"
+    cout << "table de hachage = std::unordered_map ; map (arbre) = std::map, un arbre rouge-noir.\n"
+         << "vector (push_back) : non trie, donc pas de recherche rapide (il faudrait tout parcourir).\n"
          << "Elements decales : total des elements deplaces d'une case par les insertions au milieu.\n";
 }
 
