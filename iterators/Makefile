@@ -78,6 +78,9 @@ run_14: $(BIN_DIR)/14_arbre_rouge_noir
 run_15: $(BIN_DIR)/15_arbre_rouge_noir_vs_map
 	./$(BIN_DIR)/15_arbre_rouge_noir_vs_map
 
+run_16: $(BIN_DIR)/16_invalidation_iterateurs_map
+	./$(BIN_DIR)/16_invalidation_iterateurs_map
+
 run_benchmarks: run_04 run_05 run_06 run_08
 
 help:
@@ -86,5 +89,5 @@ help:
 	@echo "  make all                   : Compile tous les fichiers source dans $(BIN_DIR)/"
 	@echo "  make data                  : Cree data/data_10M.txt (10 000 000 valeurs, pour 10 a 13)"
 	@echo "  make clean                 : Supprime les executables compiles"
-	@echo "  make run_01 ... run_15     : Execute directement un programme precis"
+	@echo "  make run_01 ... run_16     : Execute directement un programme precis"
 	@echo "  make run_benchmarks        : Execute les benchmarks 04, 05, 06 et 08"

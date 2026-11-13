@@ -1,0 +1,386 @@
+\documentclass[11pt,a4paper]{article}
+
+% ------------------------------------------------------------------------------
+% Packages
+% ------------------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{babel,arrows.meta}
+\usepackage{hyperref}
+
+\hypersetup{colorlinks=true, linkcolor=bleu, urlcolor=bleu}
+
+% ------------------------------------------------------------------------------
+% Couleurs
+% ------------------------------------------------------------------------------
+\definecolor{bleu}{HTML}{1E3A8A}
+\definecolor{vert}{HTML}{16A34A}
+\definecolor{vertfond}{HTML}{DCFCE7}
+\definecolor{rouge}{HTML}{DC2626}
+\definecolor{rougefond}{HTML}{FEE2E2}
+\definecolor{orange}{HTML}{EA580C}
+\definecolor{orangefond}{HTML}{FFEDD5}
+\definecolor{gris}{HTML}{64748B}
+\definecolor{codefond}{HTML}{F8FAFC}
+\definecolor{codecadre}{HTML}{CBD5E1}
+
+% ------------------------------------------------------------------------------
+% Style du code C++
+% ------------------------------------------------------------------------------
+\lstset{
+  language=C++,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{bleu}\bfseries,
+  commentstyle=\color{gris}\itshape,
+  stringstyle=\color{vert},
+  backgroundcolor=\color{codefond},
+  frame=single,
+  rulecolor=\color{codecadre},
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  numbers=left,
+  numberstyle=\tiny\color{gris},
+  captionpos=b,
+}
+\renewcommand{\lstlistingname}{Code}
+
+% ------------------------------------------------------------------------------
+% Styles TikZ
+% ------------------------------------------------------------------------------
+\tikzset{
+  case/.style={rectangle, draw=black!60, thick, minimum width=17mm, minimum height=7mm,
+               inner sep=0pt, font=\small\bfseries, fill=white},
+  garde/.style={case, draw=orange, fill=orangefond},
+  neuf/.style={case, draw=vert, fill=vertfond},
+  noeud/.style={rectangle, rounded corners=2pt, draw=black!60, thick, minimum width=14mm,
+                minimum height=7mm, inner sep=0pt, font=\small\bfseries, fill=white},
+  noeudgarde/.style={noeud, draw=orange, fill=orangefond},
+  noeudneuf/.style={noeud, draw=vert, fill=vertfond},
+  lien/.style={draw=black!45, thick},
+  fleche/.style={-{Stealth[length=2.5mm]}, thick, orange},
+  indice/.style={font=\scriptsize, text=gris},
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\renewcommand{\arraystretch}{1.2}
+\newcommand{\entete}[1]{\textbf{\begin{tabular}[c]{@{}c@{}}#1\end{tabular}}}
+\newcommand{\oui}{\textcolor{vert}{\textbf{valide}}}
+\newcommand{\non}{\textcolor{rouge}{\textbf{invalide}}}
+
+\title{\textbf{Insertion et validité des itérateurs}\\[4pt]
+       \large \texttt{std::vector}, \texttt{std::map} et \texttt{std::unordered\_map} avec des
+       paires (clé, valeur)}
+\author{Zakariae Bakkari\\
+        \small Programmation Objet Avancée et Design Patterns\\
+        \small\url{https://github.com/zakariae-bakkari/cpp_ilisi2}}
+\date{13 novembre 2026}
+
+\begin{document}
+
+\maketitle
+
+% ==============================================================================
+\section{Les questions}
+% ==============================================================================
+
+\begin{enumerate}
+  \item Une insertion pendant qu'on garde un itérateur va-t-elle le perturber ?
+  \item L'insertion dans un \texttt{vector} et dans une \texttt{map} change-t-elle
+        l'itérateur différemment ? Faut-il en reprendre un autre ?
+  \item Concrètement : on a un \texttt{vector}, on insère 0, l'itérateur reste-t-il
+        valide ? Et pour la \texttt{map} ? Pourquoi ?
+  \item Que se passe-t-il avec une table de hachage (\texttt{unordered\_map}) ?
+  \item Avec des paires (clé, valeur), dans trois scénarios : données
+        \textbf{aléatoires}, \textbf{triées} et \textbf{presque triées}.
+\end{enumerate}
+
+\textbf{Code source} (option \textbf{17} du menu \texttt{./run.sh}, ou
+\texttt{make run\_16}) :\\
+{\scriptsize\url{https://github.com/zakariae-bakkari/cpp_ilisi2/blob/main/iterators/src/16_invalidation_iterateurs_map.cpp}}
+
+% ==============================================================================
+\section{La réponse en un tableau}
+% ==============================================================================
+
+Un itérateur est \textbf{invalide} quand il ne désigne plus l'élément qu'il désignait. Le
+lire ou l'avancer est alors un \textbf{comportement indéfini} : le programme peut afficher
+une mauvaise valeur, planter, ou sembler marcher par hasard.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|p{3.6cm}|p{4.2cm}|p{3.4cm}|p{3.4cm}|}
+\hline
+\textbf{Opération} & \textbf{\texttt{vector}} & \textbf{\texttt{map}} & \textbf{\texttt{unordered\_map}} \\
+\hline
+insertion, sans réallocation ni rehash
+  & \non{} à partir du point d'insertion (\oui{} avant)
+  & \oui{}
+  & \oui{} \\
+\hline
+insertion, avec réallocation (\texttt{vector}) ou rehash (\texttt{unordered\_map})
+  & \non{} partout
+  & (n'arrive jamais)
+  & itérateurs \non{},\newline références \oui{} \\
+\hline
+suppression d'un élément
+  & \non{} à partir du point de suppression
+  & \oui{} sauf l'élément supprimé
+  & \oui{} sauf l'élément supprimé \\
+\hline
+\end{tabular}
+\caption{Ce que deviennent les itérateurs gardés avant l'opération (règles de la norme C++).}
+\end{table}
+
+\textbf{Donc oui, il faut parfois reprendre un autre itérateur} : toujours avec un
+\texttt{vector} après une insertion au milieu ou une réallocation, et avec une
+\texttt{unordered\_map} après un rehash. Avec une \texttt{map}, jamais.
+
+% ==============================================================================
+\section{Pourquoi ? La façon dont chaque conteneur range ses éléments}
+% ==============================================================================
+
+\subsection{\texttt{vector} : un seul tableau, les éléments collés}
+
+Un \texttt{vector} range ses éléments \textbf{côte à côte} dans un seul bloc de mémoire. Un
+itérateur est en fait une adresse dans ce bloc. Insérer 0 au début peut casser cette
+adresse de deux façons :
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[x=17mm, y=10mm]
+  % avant
+  \node[font=\small\bfseries, anchor=east] at (-0.6,0) {avant};
+  \node[case]  at (0,0) {(10,100)};
+  \node[garde] (g) at (1,0) {(20,200)};
+  \node[case]  at (2,0) {(30,300)};
+  \node[case, draw=black!25, text=black!30] at (3,0) {libre};
+  \draw[fleche] (1,1) node[above, font=\small, text=orange] {it} -- (g.north);
+  % decalage
+  \node[font=\small\bfseries, anchor=east] at (-0.6,-2) {après};
+  \node[neuf]  at (0,-2) {(0,0)};
+  \node[garde] (h) at (1,-2) {(10,100)};
+  \node[case]  at (2,-2) {(20,200)};
+  \node[case]  at (3,-2) {(30,300)};
+  \draw[fleche] (1,-1) node[above, font=\small, text=orange] {it} -- (h.north);
+  \node[font=\small, text width=50mm, anchor=west] at (3.7,-2)
+       {\textbf{(a) il reste de la place :} tout est décalé d'une case ; \texttt{it} désigne
+        maintenant (10,100).};
+  % reallocation
+  \node[font=\small\bfseries, anchor=east] at (-0.6,-4) {après};
+  \node[neuf]  at (0,-4) {(0,0)};
+  \node[case]  at (1,-4) {(10,100)};
+  \node[case]  at (2,-4) {(20,200)};
+  \node[case]  at (3,-4) {(30,300)};
+  \node[font=\small, text width=50mm, anchor=west] at (3.7,-4)
+       {\textbf{(b) tableau plein (capacité 3) :} un nouveau tableau, plus grand, ailleurs ;
+        l'ancien est libéré et \texttt{it} pointe dans le vide.};
+\end{tikzpicture}
+\caption{Insérer 0 au début d'un \texttt{vector} : dans les deux cas, \texttt{it} est invalide.}
+\end{figure}
+
+\textbf{Réponse à « on insère 0, l'itérateur reste-t-il valide ? » : non}, jamais quand on
+insère avant lui. Seul un \texttt{push\_back} sans réallocation laisse valides les
+itérateurs déjà pris (sauf \texttt{end()}).
+
+\subsection{\texttt{map} : un nœud par paire, reliés par des pointeurs}
+
+Une \texttt{map} est un arbre rouge-noir : chaque paire (clé, valeur) vit dans \textbf{son
+propre nœud}, alloué une fois pour toutes. Insérer une paire crée un nouveau nœud et
+change quelques pointeurs (et des couleurs, et parfois une rotation), mais \textbf{aucun
+nœud existant ne change d'adresse}. Un itérateur de \texttt{map} pointe vers un nœud : il
+reste donc valide.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[level distance=11mm,
+  level 1/.style={sibling distance=34mm}, level 2/.style={sibling distance=17mm},
+  edge from parent/.style={lien}]
+  \node[noeud] {(20,200)}
+    child { node[noeud] {(10,100)}
+      child { node[noeudneuf] {(0,0)} }
+      child[missing] }
+    child { node[noeud] {(30,300)} };
+  \node[font=\small, text width=62mm, anchor=west] at (2.8,-1.1)
+       {Insérer (0,0) ajoute un nœud (en vert) sous (10,100). Les nœuds (10,100), (20,200)
+        et (30,300) restent à la même adresse : un itérateur sur (20,200) reste \oui.};
+\end{tikzpicture}
+\caption{Insérer 0 dans une \texttt{map} : seuls des pointeurs changent.}
+\end{figure}
+
+\subsection{\texttt{unordered\_map} : des cases, et des nœuds rangés dedans}
+
+Une table de hachage a un tableau de \textbf{cases} (\textit{buckets}). La clé est hachée
+pour choisir sa case, et chaque paire est, comme dans la \texttt{map}, dans son propre
+nœud. Quand il y a trop de paires par case, la table fait un \textbf{rehash} : elle prend
+plus de cases et y redistribue les nœuds.
+
+\begin{itemize}
+  \item Les \textbf{itérateurs} deviennent \non{} après un rehash : l'ordre de parcours des
+        cases a changé.
+  \item Les \textbf{références et pointeurs} vers une paire restent \oui{} : le nœud
+        lui-même n'a pas bougé, il a seulement changé de case.
+  \item Sans rehash (par exemple après \texttt{reserve(n)}), une insertion n'invalide aucun
+        itérateur.
+\end{itemize}
+
+% ==============================================================================
+\section{Démonstration (programme 16, partie 1)}
+% ==============================================================================
+
+Le programme garde un itérateur sur la paire (20,\,200), fait l'opération, puis dit si
+l'itérateur est encore valide. Il ne lit \textbf{jamais} un itérateur invalide (ce serait un
+comportement indéfini) : il compare les adresses avant et après, et relit les cases avec
+\texttt{v[i]}.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|c|p{5.4cm}|p{5.2cm}|p{2.6cm}|}
+\hline
+& \textbf{Opération} & \textbf{Ce qu'on observe} & \textbf{Itérateur} \\
+\hline
+1 & \texttt{vector} plein (capacité 3), insertion de (0,0) au début
+  & capacité 3 $\to$ 6, tableau déplacé ailleurs & \non \\
+\hline
+2 & \texttt{vector} avec de la place (capacité 10), insertion de (0,0) au début
+  & même tableau, mais la case de \texttt{it} contient (10,100) & \non \\
+\hline
+3 & \texttt{vector} avec de la place, \texttt{push\_back} de (40,400)
+  & rien ne bouge avant la fin, \texttt{*it} = (20,200) & \oui \\
+\hline
+4 & \texttt{map}, insertion de (0,0) puis de 100\,000 paires
+  & \texttt{it->first} = 20, \texttt{it->second} = 200 & \oui \\
+\hline
+5 & \texttt{unordered\_map}, insertion de (0,0) puis de 100\,000 paires
+  & 13 $\to$ 172\,933 cases (rehash) ; la paire est restée à la même adresse
+  & \non{} (référence \oui) \\
+\hline
+6 & \texttt{map}, \texttt{erase(10)}
+  & \texttt{it->first} = 20 & \oui \\
+\hline
+\end{tabular}
+\caption{Résultats de la partie 1 du programme 16.}
+\end{table}
+
+% ==============================================================================
+\section{Les trois scénarios avec 100\,000 paires (programme 16, partie 2)}
+% ==============================================================================
+
+On insère 100\,000 paires (clé, valeur $= 10 \times$ clé), les clés de 1 à 100\,000 étant
+\textbf{aléatoires}, \textbf{triées}, ou \textbf{presque triées} (triées puis 10\,\% des
+valeurs échangées au hasard). On garde un itérateur sur la première paire insérée, et on
+regarde à la fin s'il est encore valide. Quatre façons de ranger les paires :
+
+\begin{itemize}
+  \item \textbf{\texttt{vector} trié} : chaque paire est insérée à sa place
+        (\texttt{lower\_bound} puis \texttt{insert}), pour pouvoir chercher par dichotomie ;
+  \item \textbf{\texttt{vector} (\texttt{push\_back})} : les paires sont ajoutées à la fin,
+        sans ordre (pas de recherche rapide possible) ;
+  \item \textbf{\texttt{map}} et \textbf{\texttt{unordered\_map}}.
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{|l|l|r|r|r|r|c|c|}
+\hline
+\textbf{Données} & \textbf{Structure} & \entete{Insertion} & \entete{Recherche\\des $n$ clés}
+  & \entete{Invali-\\dations} & \entete{Éléments\\décalés}
+  & \entete{Itérateur\\gardé} & \entete{Référence\\gardée} \\
+\hline
+\multirow{4}{*}{aléatoires}
+  & \texttt{vector} trié        & 616,7 ms & 8,6 ms  & 18 & 2\,502\,036\,049 & \non & \non \\
+  & \texttt{vector} (push\_back) & 0,1 ms   & --      & 18 & 0               & \non & \non \\
+  & \texttt{map}                & 14,0 ms  & 14,6 ms & 0  & 0               & \oui & \oui \\
+  & \texttt{unordered\_map}      & 4,7 ms   & 0,3 ms  & 13 & 0               & \non & \oui \\
+\hline
+\multirow{4}{*}{triées}
+  & \texttt{vector} trié        & 1,9 ms   & 4,0 ms  & 18 & 0               & \non & \non \\
+  & \texttt{vector} (push\_back) & 0,1 ms   & --      & 18 & 0               & \non & \non \\
+  & \texttt{map}                & 7,6 ms   & 5,5 ms  & 0  & 0               & \oui & \oui \\
+  & \texttt{unordered\_map}      & 2,5 ms   & 0,3 ms  & 13 & 0               & \non & \oui \\
+\hline
+\multirow{4}{*}{presque triées}
+  & \texttt{vector} trié        & 132,3 ms & 5,0 ms  & 18 & 576\,523\,734   & \non & \non \\
+  & \texttt{vector} (push\_back) & 0,2 ms   & --      & 18 & 0               & \non & \non \\
+  & \texttt{map}                & 10,3 ms  & 8,0 ms  & 0  & 0               & \oui & \oui \\
+  & \texttt{unordered\_map}      & 3,2 ms   & 0,3 ms  & 13 & 0               & \non & \oui \\
+\hline
+\end{tabular}
+\caption{100\,000 paires. Temps : médianes sur 7 exécutions (Intel Core i5-1135G7,
+\texttt{g++} 15.2, \texttt{-O3}) ; les compteurs sont identiques à chaque exécution.
+\og Invalidations \fg{} : nombre de réallocations (\texttt{vector}) ou de rehash
+(\texttt{unordered\_map}), chacune invalide tous les itérateurs. \og Éléments décalés \fg{} : total des paires déplacées d'une case par les insertions au
+milieu du \texttt{vector}.}
+\end{table}
+
+\textbf{Ce qu'on en retient.}
+\begin{enumerate}
+  \item \textbf{La validité ne dépend pas de l'ordre des données.} Dans les trois scénarios,
+        l'itérateur gardé est invalide pour le \texttt{vector} (18 réallocations : la
+        capacité double à chaque fois, $2^{17} \geq 100\,000$) et pour
+        l'\texttt{unordered\_map} (13 rehash), et toujours valide pour la \texttt{map}.
+  \item \textbf{L'ordre des données change surtout le coût du \texttt{vector} trié.} Avec
+        des clés aléatoires, chaque insertion décale en moyenne la moitié du tableau :
+        2,5 milliards de déplacements ($\approx n^2/4$), 617~ms. Avec des clés triées, on
+        insère toujours à la fin : 0 décalage, 1,9~ms. Presque triées : entre les deux.
+  \item \textbf{La \texttt{map} est la seule à garder tous ses itérateurs}, quel que soit
+        l'ordre des données, pour un coût d'insertion stable (8 à 14~ms).
+  \item \textbf{La table de hachage est la plus rapide pour chercher} (0,3~ms pour
+        100\,000 recherches, contre 5 à 15~ms pour la \texttt{map}), mais ses itérateurs ne
+        survivent pas aux rehash et ses clés ne sont pas triées.
+  \item Les temps de ce rapport et ceux du rapport sur l'arbre rouge-noir n'ont pas été
+        mesurés au même moment (la machine allait environ 3 fois plus vite ici) : on ne
+        compare que les valeurs d'un même tableau.
+\end{enumerate}
+
+% ==============================================================================
+\section{Comment éviter le problème}
+% ==============================================================================
+
+\begin{itemize}
+  \item \textbf{Reprendre l'itérateur renvoyé par l'opération} : \texttt{insert} et
+        \texttt{erase} renvoient un itérateur valide.
+\begin{lstlisting}
+it = v.insert(it, {0, 0});   // it designe maintenant (0,0), et il est valide
+it = v.erase(it);            // it designe l'element qui suit l'element supprime
+\end{lstlisting}
+  \item \textbf{\texttt{vector}} : réserver la place à l'avance (\texttt{v.reserve(n)})
+        évite les réallocations, ou garder un \textbf{indice} plutôt qu'un itérateur.
+  \item \textbf{\texttt{unordered\_map}} : \texttt{u.reserve(n)} prépare assez de cases pour
+        $n$ paires et évite les rehash ; sinon, garder une \textbf{référence} vers la paire
+        (elle reste valide) ou simplement la \textbf{clé}.
+  \item \textbf{\texttt{map}} : rien à faire, ses itérateurs restent valides (sauf celui de
+        l'élément supprimé).
+\end{itemize}
+
+% ==============================================================================
+\section{Conclusion}
+% ==============================================================================
+
+Oui, une insertion peut perturber un itérateur, et tout dépend de la façon dont le
+conteneur range ses éléments. Le \texttt{vector} colle ses éléments dans un seul tableau :
+insérer 0 au début les décale ou les déplace tous, donc l'itérateur est invalide et il faut
+en reprendre un autre. La \texttt{map} met chaque paire dans un nœud qui ne bouge jamais :
+ses itérateurs restent valides. La table de hachage est entre les deux : ses nœuds ne
+bougent pas (les références restent valides), mais un rehash invalide ses itérateurs. Pour
+des paires (clé, valeur), la \texttt{map} est donc le choix sûr quand on garde des
+itérateurs, et l'\texttt{unordered\_map} le choix rapide quand on cherche par clé sans
+besoin d'ordre.
+
+\end{document}
